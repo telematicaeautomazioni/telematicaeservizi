@@ -36,6 +36,8 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginRight: 12,
+    backgroundColor: colors.secondary,
+    borderRadius: 8,
   },
   headerTitleContainer: {
     flexDirection: 'row',
@@ -118,8 +120,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   removeButton: {
-    padding: 8,
-    backgroundColor: colors.errorLight,
+    padding: 10,
+    backgroundColor: colors.error,
     borderRadius: 8,
   },
   logoutButton: {
@@ -286,7 +288,7 @@ export default function AccountManagementScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <IconSymbol name="arrow-back" size={24} color={colors.secondary} />
+          <IconSymbol name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Image
@@ -353,7 +355,7 @@ export default function AccountManagementScreen() {
                   style={styles.removeButton}
                   onPress={() => handleRemovePiva(company)}
                 >
-                  <IconSymbol name="delete" size={20} color={colors.error} />
+                  <IconSymbol name="delete" size={20} color={colors.card} />
                 </TouchableOpacity>
               </View>
             ))

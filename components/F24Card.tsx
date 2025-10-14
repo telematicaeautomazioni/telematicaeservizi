@@ -43,7 +43,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
   const handleAccept = () => {
     Alert.alert(
       'Conferma Pagamento',
-      `Confermi di aver pagato €${f24.importo.toFixed(2)}?`,
+      `Confermi di voler pagare €${f24.importo.toFixed(2)}?`,
       [
         { text: 'Annulla', style: 'cancel' },
         {
@@ -197,7 +197,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
 
             <TextInput
               style={styles.modalInput}
-              placeholder="Importo pagato"
+              placeholder="Importo da pagare"
               placeholderTextColor={colors.textSecondary}
               value={partialAmount}
               onChangeText={setPartialAmount}

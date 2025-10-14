@@ -55,9 +55,9 @@ const styles = StyleSheet.create({
     color: colors.secondary,
   },
   accountButton: {
-    padding: 8,
+    padding: 10,
     borderRadius: 8,
-    backgroundColor: colors.secondary + '30',
+    backgroundColor: colors.secondary,
   },
   companySelector: {
     flexDirection: 'row',
@@ -283,7 +283,7 @@ export default function HomeScreen() {
             style={styles.accountButton}
             onPress={() => router.push('/account-management')}
           >
-            <IconSymbol name="settings" size={24} color={colors.secondary} />
+            <IconSymbol name="settings" size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
