@@ -180,55 +180,59 @@ export default function AccountManagementScreen() {
     const cleanPiva = piva.replace(/\s/g, '').toUpperCase();
     
     // Italian P.IVA is 11 digits
-    if (!/^\d{11}$/.test(cleanPiva)) {
-      return false;
-    }
+    const isPivaValid = /^\d{11}$/.test(cleanPiva);
     
-    return true;
+    // Italian CF is 16 alphanumeric characters
+    const isCfValid = /^[A-Z0-9]{16}$/.test(cleanPiva);
+    
+    return isPivaValid || isCfValid;
   };
 
   const handleAddPiva = async () => {
     if (!newPiva.trim()) {
-      Alert.alert('Errore', 'Inserisci una Partita IVA');
+      Alert.alert('Errore', 'Inserisci una Partita IVA o un Codice Fiscale');
       return;
     }
 
     const cleanPiva = newPiva.replace(/\s/g, '').toUpperCase();
 
     if (!validatePiva(cleanPiva)) {
-      Alert.alert('Errore', 'Partita IVA non valida. Deve essere di 11 cifre.');
+      Alert.alert(
+        'Errore', 
+        'Formato non valido. Inserisci una Partita IVA (11 cifre) o un Codice Fiscale (16 caratteri alfanumerici).'
+      );
       return;
     }
 
     try {
       setAdding(true);
-      console.log('Adding P.IVA:', cleanPiva);
+      console.log('Adding P.IVA/CF:', cleanPiva);
 
       // Check if company exists
       const company = await supabaseService.getCompanyByPiva(cleanPiva);
 
       if (!company) {
-        Alert.alert('Errore', 'Azienda non trovata con questa Partita IVA');
+        Alert.alert('Errore', 'Azienda non trovata con questa Partita IVA o Codice Fiscale');
         return;
       }
 
       // Check if already associated
       if (company.idClienteAssociato) {
-        Alert.alert('Errore', 'Questa Partita IVA è già associata a un altro account');
+        Alert.alert('Errore', 'Questa Partita IVA o Codice Fiscale è già associato a un altro account');
         return;
       }
 
       // Associate company with user
       await supabaseService.associateCompanyToClient(cleanPiva, user!.idCliente);
 
-      Alert.alert('Successo', 'Partita IVA associata correttamente');
+      Alert.alert('Successo', 'Partita IVA o Codice Fiscale associato correttamente');
       setNewPiva('');
       await loadUserCompanies();
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      console.error('Error adding P.IVA:', error);
-      Alert.alert('Errore', 'Impossibile associare la Partita IVA');
+      console.error('Error adding P.IVA/CF:', error);
+      Alert.alert('Errore', 'Impossibile associare la Partita IVA o il Codice Fiscale');
     } finally {
       setAdding(false);
     }
@@ -245,7 +249,7 @@ export default function AccountManagementScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('Removing P.IVA:', company.partitaIva);
+              console.log('Removing P.IVA/CF:', company.partitaIva);
               
               await supabaseService.removeCompanyAssociation(company.partitaIva, user!.idCliente);
               
@@ -254,7 +258,7 @@ export default function AccountManagementScreen() {
               
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
-              console.error('Error removing P.IVA:', error);
+              console.error('Error removing P.IVA/CF:', error);
               Alert.alert('Errore', 'Impossibile rimuovere l\'associazione');
             }
           },
@@ -304,18 +308,19 @@ export default function AccountManagementScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Aggiungi Partita IVA</Text>
+          <Text style={styles.sectionTitle}>Aggiungi Partita IVA o Codice Fiscale</Text>
           <View style={styles.card}>
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Partita IVA</Text>
+              <Text style={styles.label}>Partita IVA o Codice Fiscale</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Inserisci la Partita IVA (11 cifre)"
+                placeholder="Inserisci P.IVA (11 cifre) o CF (16 caratteri)"
                 placeholderTextColor={colors.textSecondary}
                 value={newPiva}
                 onChangeText={setNewPiva}
-                keyboardType="numeric"
-                maxLength={11}
+                keyboardType="default"
+                autoCapitalize="characters"
+                maxLength={20}
                 editable={!adding}
               />
             </View>
@@ -351,7 +356,7 @@ export default function AccountManagementScreen() {
               <View key={company.idAzienda} style={styles.companyItem}>
                 <View style={styles.companyInfo}>
                   <Text style={styles.companyName}>{company.denominazione}</Text>
-                  <Text style={styles.companyPiva}>P.IVA: {company.partitaIva}</Text>
+                  <Text style={styles.companyPiva}>P.IVA/CF: {company.partitaIva}</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.removeButton}
