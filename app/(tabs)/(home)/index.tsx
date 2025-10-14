@@ -18,7 +18,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 type TabType = 'f24' | 'documenti';
 
@@ -142,17 +142,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [user]);
-
-  useEffect(() => {
-    if (selectedCompany) {
-      loadCompanyData();
-    }
-  }, [selectedCompany]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!user) {
       console.log('No user found');
       return;
@@ -176,9 +166,9 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const loadCompanyData = async () => {
+  const loadCompanyData = useCallback(async () => {
     if (!selectedCompany) return;
 
     try {
@@ -201,7 +191,17 @@ export default function HomeScreen() {
     } finally {
       setLoadingData(false);
     }
-  };
+  }, [selectedCompany]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (selectedCompany) {
+      loadCompanyData();
+    }
+  }, [loadCompanyData, selectedCompany]);
 
   const handleUpdateF24 = async (id: string, updates: Partial<F24>) => {
     try {

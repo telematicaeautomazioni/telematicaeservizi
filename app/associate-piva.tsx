@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { supabaseService } from '@/services/supabaseService';
 import { useAuth } from '@/contexts/AuthContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const styles = StyleSheet.create({
   container: {
@@ -139,11 +139,7 @@ export default function AssociatePivaScreen() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const { user } = useAuth();
 
-  useEffect(() => {
-    loadAssociatedCompanies();
-  }, []);
-
-  const loadAssociatedCompanies = async () => {
+  const loadAssociatedCompanies = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -157,7 +153,11 @@ export default function AssociatePivaScreen() {
     } finally {
       setLoadingCompanies(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadAssociatedCompanies();
+  }, [loadAssociatedCompanies]);
 
   const handleAssociate = async () => {
     if (!piva.trim()) {

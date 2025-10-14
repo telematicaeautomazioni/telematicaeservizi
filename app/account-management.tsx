@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 
 const styles = StyleSheet.create({
@@ -140,11 +140,7 @@ export default function AccountManagementScreen() {
   const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
 
-  useEffect(() => {
-    loadUserCompanies();
-  }, [user]);
-
-  const loadUserCompanies = async () => {
+  const loadUserCompanies = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -158,7 +154,11 @@ export default function AccountManagementScreen() {
     } finally {
       setLoadingCompanies(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadUserCompanies();
+  }, [loadUserCompanies]);
 
   const validatePiva = (piva: string): boolean => {
     return /^\d{11}$/.test(piva.trim());
