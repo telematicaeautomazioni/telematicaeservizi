@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 10,
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.error,
     borderRadius: 8,
     marginLeft: 12,
   },
@@ -281,8 +281,8 @@ export default function AccountManagementScreen() {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            logout();
+          onPress: async () => {
+            await logout();
             router.replace('/login');
           },
         },

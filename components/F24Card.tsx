@@ -14,6 +14,7 @@ import {
 import { colors, buttonStyles } from '@/styles/commonStyles';
 import { F24 } from '@/types';
 import { IconSymbol } from '@/components/IconSymbol';
+import { router } from 'expo-router';
 
 interface F24CardProps {
   f24: F24;
@@ -119,6 +120,12 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
     }
   };
 
+  const handleChangeOfMind = () => {
+    router.push('/contact-support');
+  };
+
+  const showChangeOfMindButton = f24.stato === 'Confermato' || f24.stato === 'Rifiutato';
+
   return (
     <>
       <View style={styles.card}>
@@ -178,6 +185,17 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
             </TouchableOpacity>
           </View>
         )}
+
+        {showChangeOfMindButton && (
+          <TouchableOpacity
+            style={styles.changeOfMindButton}
+            onPress={handleChangeOfMind}
+          >
+            <IconSymbol name="questionmark.circle.fill" size={20} color={colors.primary} />
+            <Text style={styles.changeOfMindText}>Hai cambiato idea?</Text>
+            <IconSymbol name="chevron.right" size={18} color={colors.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <Modal
@@ -204,13 +222,13 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[buttonStyles.outline, styles.modalButton]}
+                style={[buttonStyles.secondary, styles.modalButton]}
                 onPress={() => {
                   setShowPartialModal(false);
                   setPartialAmount('');
                 }}
               >
-                <Text style={buttonStyles.textOutline}>Annulla</Text>
+                <Text style={buttonStyles.secondaryText}>Annulla</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -219,9 +237,9 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color={colors.card} />
+                  <ActivityIndicator color={colors.secondary} />
                 ) : (
-                  <Text style={buttonStyles.text}>Conferma</Text>
+                  <Text style={buttonStyles.primaryText}>Conferma</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -315,6 +333,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.card,
+  },
+  changeOfMindButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    backgroundColor: colors.highlight,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+  },
+  changeOfMindText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
+    marginLeft: 8,
+    marginRight: 4,
   },
   modalOverlay: {
     flex: 1,

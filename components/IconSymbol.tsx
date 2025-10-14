@@ -1,3 +1,4 @@
+
 // This file is a fallback for using MaterialIcons on Android and web.
 
 import React from "react";
@@ -19,13 +20,16 @@ const MAPPING = {
   "house.fill": "home",
   "house": "home-outlined",
   "arrow.left": "arrow-back",
+  "arrow-back": "arrow-back",
   "arrow.right": "arrow-forward",
   "arrow.up": "arrow-upward",
   "arrow.down": "arrow-downward",
   "chevron.left": "chevron-left",
   "chevron.right": "chevron-right",
+  "chevron-right": "chevron-right",
   "chevron.up": "keyboard-arrow-up",
   "chevron.down": "keyboard-arrow-down",
+  "chevron-down": "keyboard-arrow-down",
   "arrow.clockwise": "refresh",
   "arrow.counterclockwise": "refresh",
 
@@ -47,6 +51,7 @@ const MAPPING = {
   "plus": "add",
   "minus": "remove",
   "xmark": "close",
+  "close": "close",
   "checkmark": "check",
   "checkmark.circle.fill": "check-circle",
   "checkmark.circle": "check-circle-outline",
@@ -55,6 +60,7 @@ const MAPPING = {
   "multiply": "clear",
   "trash.fill": "delete",
   "trash": "delete-outline",
+  "percent": "percent",
 
   // Editing & Creation
   "pencil": "edit",
@@ -161,6 +167,9 @@ const MAPPING = {
   "lightbulb.fill": "lightbulb",
   "moon.fill": "dark-mode",
   "sun.max.fill": "light-mode",
+
+  // Business
+  "business": "business",
 } as Partial<
   Record<
     import("expo-symbols").SymbolViewProps["name"],

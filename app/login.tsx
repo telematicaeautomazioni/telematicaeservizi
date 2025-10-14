@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabaseService } from '@/services/supabaseService';
 import { notificationService } from '@/services/notificationService';
 import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -92,10 +92,35 @@ const styles = StyleSheet.create({
 });
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { user, login, isLoading } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (!isLoading && user) {
+      console.log('User already logged in, redirecting...');
+      checkUserCompaniesAndRedirect();
+    }
+  }, [isLoading, user]);
+
+  const checkUserCompaniesAndRedirect = async () => {
+    if (!user) return;
+
+    try {
+      const companies = await supabaseService.getCompaniesByClientId(user.idCliente);
+      console.log('User has', companies.length, 'associated companies');
+
+      if (companies.length === 0) {
+        router.replace('/associate-piva');
+      } else {
+        router.replace('/(tabs)/(home)');
+      }
+    } catch (error) {
+      console.error('Error checking companies:', error);
+    }
+  };
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -111,22 +136,22 @@ export default function LoginScreen() {
       setLoading(true);
       console.log('Attempting login...');
 
-      const user = await supabaseService.login(username, password);
+      const userData = await supabaseService.login(username, password);
 
-      if (!user) {
+      if (!userData) {
         Alert.alert('Errore', 'Nome utente o password non corretti');
         return;
       }
 
-      console.log('Login successful, user:', user);
-      login(user);
+      console.log('Login successful, user:', userData);
+      await login(userData);
 
       // Register for push notifications
       console.log('Registering for push notifications...');
-      await notificationService.registerForPushNotifications(user.idCliente);
+      await notificationService.registerForPushNotifications(userData.idCliente);
 
       // Check if user has associated companies
-      const companies = await supabaseService.getCompaniesByClientId(user.idCliente);
+      const companies = await supabaseService.getCompaniesByClientId(userData.idCliente);
       console.log('User has', companies.length, 'associated companies');
 
       if (companies.length === 0) {
@@ -143,6 +168,20 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  // Show loading while checking session
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: 16, color: colors.textSecondary }}>
+            Caricamento...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
