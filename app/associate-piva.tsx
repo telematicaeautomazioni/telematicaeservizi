@@ -193,8 +193,8 @@ export default function AssociatePivaScreen() {
         return;
       }
 
-      // Associate company with user
-      await supabaseService.associateCompanyWithClient(cleanPiva, user!.idCliente);
+      // Associate company with user - FIXED: Changed from associateCompanyWithClient to associateCompanyToClient
+      await supabaseService.associateCompanyToClient(cleanPiva, user!.idCliente);
 
       Alert.alert('Successo', 'Partita IVA associata correttamente');
       setPiva('');
