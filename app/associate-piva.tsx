@@ -193,7 +193,7 @@ export default function AssociatePivaScreen() {
         return;
       }
 
-      // Associate company with user - FIXED: Changed from associateCompanyWithClient to associateCompanyToClient
+      // Associate company with user
       await supabaseService.associateCompanyToClient(cleanPiva, user!.idCliente);
 
       Alert.alert('Successo', 'Partita IVA associata correttamente');
@@ -236,9 +236,9 @@ export default function AssociatePivaScreen() {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.title}>Associa Partita IVA</Text>
+          <Text style={styles.title}>Associa Partite IVA</Text>
           <Text style={styles.subtitle}>
-            Inserisci la Partita IVA della tua azienda per accedere ai documenti
+            Inserisci le Partite IVA delle tue aziende per accedere ai documenti
           </Text>
         </View>
 

@@ -1,8 +1,11 @@
 
-import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState } from 'react';
-import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
+import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabaseService } from '@/services/supabaseService';
+import { notificationService } from '@/services/notificationService';
+import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -16,8 +19,6 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { supabaseService } from '@/services/supabaseService';
-import { useAuth } from '@/contexts/AuthContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -36,13 +37,12 @@ const styles = StyleSheet.create({
   logo: {
     width: 120,
     height: 120,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: colors.primary,
-    marginTop: 8,
     textAlign: 'center',
   },
   subtitle: {
@@ -51,8 +51,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  card: {
+    ...commonStyles.card,
+    padding: 24,
+  },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
@@ -62,87 +66,81 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
     color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  inputFocused: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
   loginButton: {
     ...buttonStyles.primary,
-    marginTop: 24,
+    marginTop: 8,
   },
   loginButtonText: {
     ...buttonStyles.primaryText,
   },
-  errorText: {
-    color: colors.error,
-    fontSize: 14,
-    marginTop: 8,
+  footer: {
+    marginTop: 32,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 12,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 });
 
 export default function LoginScreen() {
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [usernameFocused, setUsernameFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
-  const { login, setIsFirstAccess } = useAuth();
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
-      setError('Inserisci nome utente e password');
+      Alert.alert('Errore', 'Inserisci nome utente e password');
       return;
     }
 
-    setLoading(true);
-    setError('');
-
-    try {
-      await performLogin();
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Errore durante il login. Riprova.');
-    } finally {
-      setLoading(false);
-    }
+    await performLogin();
   };
 
   const performLogin = async () => {
     try {
-      const user = await supabaseService.login(username.trim(), password);
+      setLoading(true);
+      console.log('Attempting login...');
+
+      const user = await supabaseService.login(username, password);
 
       if (!user) {
-        setError('Nome utente o password non corretti');
+        Alert.alert('Errore', 'Nome utente o password non corretti');
         return;
       }
 
-      // Login successful
+      console.log('Login successful, user:', user);
       login(user);
+
+      // Register for push notifications
+      console.log('Registering for push notifications...');
+      await notificationService.registerForPushNotifications(user.idCliente);
 
       // Check if user has associated companies
       const companies = await supabaseService.getCompaniesByClientId(user.idCliente);
+      console.log('User has', companies.length, 'associated companies');
 
       if (companies.length === 0) {
-        // First access - redirect to P.IVA association
-        setIsFirstAccess(true);
+        // No companies associated, redirect to association screen
         router.replace('/associate-piva');
       } else {
-        // User has companies - go to dashboard
-        setIsFirstAccess(false);
+        // Has companies, go to home
         router.replace('/(tabs)/(home)');
       }
     } catch (error) {
-      console.error('Error during login:', error);
-      throw error;
+      console.error('Login error:', error);
+      Alert.alert('Errore', 'Si è verificato un errore durante il login');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -163,56 +161,58 @@ export default function LoginScreen() {
               resizeMode="contain"
             />
             <Text style={styles.title}>Telematica E Servizi</Text>
-            <Text style={styles.subtitle}>Gestione Documenti e F24</Text>
+            <Text style={styles.subtitle}>Accedi al tuo account</Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Nome Utente</Text>
-            <TextInput
-              style={[styles.input, usernameFocused && styles.inputFocused]}
-              placeholder="Inserisci il tuo nome utente"
-              placeholderTextColor={colors.textSecondary}
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-              autoCorrect={false}
-              onFocus={() => setUsernameFocused(true)}
-              onBlur={() => setUsernameFocused(false)}
-              editable={!loading}
-            />
+          <View style={styles.card}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Nome Utente</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Inserisci il nome utente"
+                placeholderTextColor={colors.textSecondary}
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!loading}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Inserisci la password"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!loading}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.secondary} />
+              ) : (
+                <Text style={styles.loginButtonText}>Accedi</Text>
+              )}
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={[styles.input, passwordFocused && styles.inputFocused]}
-              placeholder="Inserisci la tua password"
-              placeholderTextColor={colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              onFocus={() => setPasswordFocused(true)}
-              onBlur={() => setPasswordFocused(false)}
-              editable={!loading}
-              onSubmitEditing={handleLogin}
-            />
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              © 2024 Telematica E Servizi{'\n'}
+              Tutti i diritti riservati
+            </Text>
           </View>
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.secondary} />
-            ) : (
-              <Text style={styles.loginButtonText}>Accedi</Text>
-            )}
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -7,6 +7,7 @@ import { Company, F24, Document } from '@/types';
 import F24Card from '@/components/F24Card';
 import { IconSymbol } from '@/components/IconSymbol';
 import { supabaseService } from '@/services/supabaseService';
+import { notificationService } from '@/services/notificationService';
 import {
   View,
   Text,
@@ -20,6 +21,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import React, { useState, useEffect, useCallback } from 'react';
+import * as Notifications from 'expo-notifications';
 
 type TabType = 'f24' | 'documenti';
 
@@ -212,6 +214,32 @@ export default function HomeScreen() {
       loadCompanyData();
     }
   }, [loadCompanyData, selectedCompany]);
+
+  // Setup notification listeners
+  useEffect(() => {
+    // Listener for notifications received while app is in foreground
+    const notificationListener = notificationService.addNotificationReceivedListener(
+      (notification) => {
+        console.log('Notification received:', notification);
+        // Reload data when notification is received
+        loadCompanyData();
+      }
+    );
+
+    // Listener for when user taps on notification
+    const responseListener = notificationService.addNotificationResponseReceivedListener(
+      (response) => {
+        console.log('Notification tapped:', response);
+        // Reload data when notification is tapped
+        loadCompanyData();
+      }
+    );
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener);
+      Notifications.removeNotificationSubscription(responseListener);
+    };
+  }, [loadCompanyData]);
 
   const handleUpdateF24 = async (id: string, updates: Partial<F24>) => {
     try {

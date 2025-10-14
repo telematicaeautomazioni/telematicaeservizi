@@ -54,6 +54,65 @@ export class SupabaseService {
     console.log('User logged out');
   }
 
+  // ===== PUSH NOTIFICATIONS =====
+
+  async updatePushToken(userId: string, token: string | null): Promise<boolean> {
+    try {
+      console.log('Updating push token for user:', userId);
+      
+      const { error } = await supabase
+        .from('clienti')
+        .update({ push_token: token })
+        .eq('id_cliente', userId);
+
+      if (error) {
+        console.error('Error updating push token:', error);
+        throw error;
+      }
+
+      console.log('Push token updated successfully');
+      return true;
+    } catch (error) {
+      console.error('Error in updatePushToken:', error);
+      throw error;
+    }
+  }
+
+  async getPushTokensByPiva(piva: string): Promise<string[]> {
+    try {
+      console.log('Getting push tokens for P.IVA:', piva);
+      
+      // Get the company
+      const { data: company, error: companyError } = await supabase
+        .from('aziende')
+        .select('id_cliente_associato')
+        .eq('partita_iva', piva)
+        .single();
+
+      if (companyError || !company || !company.id_cliente_associato) {
+        console.log('No associated client found');
+        return [];
+      }
+
+      // Get the client's push token
+      const { data: client, error: clientError } = await supabase
+        .from('clienti')
+        .select('push_token')
+        .eq('id_cliente', company.id_cliente_associato)
+        .single();
+
+      if (clientError || !client || !client.push_token) {
+        console.log('No push token found');
+        return [];
+      }
+
+      return [client.push_token];
+    } catch (error) {
+      console.error('Error in getPushTokensByPiva:', error);
+      return [];
+    }
+  }
+
   // ===== CLIENTI =====
 
   async getClients(): Promise<Client[]> {

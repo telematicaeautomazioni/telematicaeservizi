@@ -121,8 +121,10 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 10,
-    backgroundColor: colors.error,
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.error,
   },
   logoutButton: {
     ...buttonStyles.danger,
@@ -217,7 +219,7 @@ export default function AccountManagementScreen() {
       }
 
       // Associate company with user
-      await supabaseService.associateCompanyWithClient(cleanPiva, user!.idCliente);
+      await supabaseService.associateCompanyToClient(cleanPiva, user!.idCliente);
 
       Alert.alert('Successo', 'Partita IVA associata correttamente');
       setNewPiva('');
@@ -245,7 +247,7 @@ export default function AccountManagementScreen() {
             try {
               console.log('Removing P.IVA:', company.partitaIva);
               
-              await supabaseService.disassociateCompanyFromClient(company.partitaIva);
+              await supabaseService.removeCompanyAssociation(company.partitaIva, user!.idCliente);
               
               Alert.alert('Successo', 'Associazione rimossa correttamente');
               await loadUserCompanies();
@@ -355,7 +357,7 @@ export default function AccountManagementScreen() {
                   style={styles.removeButton}
                   onPress={() => handleRemovePiva(company)}
                 >
-                  <IconSymbol name="delete" size={20} color={colors.card} />
+                  <IconSymbol name="close" size={20} color={colors.error} />
                 </TouchableOpacity>
               </View>
             ))
