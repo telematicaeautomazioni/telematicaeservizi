@@ -1,5 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import { Company } from '@/types';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
+import { IconSymbol } from '@/components/IconSymbol';
+import { router } from 'expo-router';
 import {
   View,
   Text,
@@ -11,196 +15,17 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
+import { supabaseService } from '@/services/supabaseService';
 import { useAuth } from '@/contexts/AuthContext';
-import { Company } from '@/types';
-import { IconSymbol } from '@/components/IconSymbol';
-import { googleSheetsService } from '@/services/googleSheetsService';
-
-export default function AssociatePivaScreen() {
-  const [piva, setPiva] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [loadingCompanies, setLoadingCompanies] = useState(true);
-  const [associatedCompanies, setAssociatedCompanies] = useState<Company[]>([]);
-  const { user, setIsFirstAccess } = useAuth();
-
-  useEffect(() => {
-    loadAssociatedCompanies();
-  }, []);
-
-  const loadAssociatedCompanies = async () => {
-    if (!user) return;
-
-    try {
-      setLoadingCompanies(true);
-      const companies = await googleSheetsService.getCompaniesByClientId(user.idCliente);
-      setAssociatedCompanies(companies);
-      console.log('Loaded associated companies:', companies.length);
-    } catch (error) {
-      console.error('Error loading companies:', error);
-      Alert.alert('Errore', 'Impossibile caricare le aziende associate');
-    } finally {
-      setLoadingCompanies(false);
-    }
-  };
-
-  const handleAssociate = async () => {
-    if (!piva.trim()) {
-      Alert.alert('Errore', 'Inserisci una Partita IVA');
-      return;
-    }
-
-    if (piva.length !== 11) {
-      Alert.alert('Errore', 'La Partita IVA deve essere di 11 cifre');
-      return;
-    }
-
-    if (!user) {
-      Alert.alert('Errore', 'Utente non autenticato');
-      return;
-    }
-
-    setLoading(true);
-    console.log('Associating P.IVA:', piva);
-
-    try {
-      // Verifica se l'azienda esiste
-      const company = await googleSheetsService.getCompanyByPiva(piva);
-
-      if (!company) {
-        Alert.alert('Errore', 'Partita IVA non trovata');
-        setLoading(false);
-        return;
-      }
-
-      if (company.idClienteAssociato && company.idClienteAssociato !== user.idCliente) {
-        Alert.alert('Errore', 'Questa Partita IVA è già associata ad un altro cliente');
-        setLoading(false);
-        return;
-      }
-
-      // Associa l'azienda al cliente
-      await googleSheetsService.associateCompanyToClient(piva, user.idCliente);
-      
-      console.log('Company associated:', company.denominazione);
-      Alert.alert('Successo', `Azienda "${company.denominazione}" associata con successo`);
-
-      // Ricarica le aziende associate
-      await loadAssociatedCompanies();
-      setPiva('');
-    } catch (error) {
-      console.error('Error associating company:', error);
-      Alert.alert('Errore', 'Impossibile associare l\'azienda. Riprova.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleContinue = () => {
-    if (associatedCompanies.length === 0) {
-      Alert.alert('Attenzione', 'Devi associare almeno una Partita IVA per continuare');
-      return;
-    }
-
-    console.log('Continuing to dashboard with', associatedCompanies.length, 'companies');
-    setIsFirstAccess(false);
-    router.replace('/(tabs)/(home)');
-  };
-
-  const renderCompanyItem = ({ item }: { item: Company }) => (
-    <View style={styles.companyCard}>
-      <View style={styles.companyIcon}>
-        <IconSymbol name="building.2" size={24} color={colors.primary} />
-      </View>
-      <View style={styles.companyInfo}>
-        <Text style={styles.companyName}>{item.denominazione}</Text>
-        <Text style={styles.companyPiva}>P.IVA: {item.partitaIva}</Text>
-      </View>
-      <IconSymbol name="checkmark.circle.fill" size={24} color={colors.success} />
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Associa Partita IVA</Text>
-          <Text style={styles.subtitle}>
-            Inserisci la Partita IVA della tua azienda per accedere ai documenti
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Partita IVA</Text>
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Inserisci 11 cifre"
-              placeholderTextColor={colors.textSecondary}
-              value={piva}
-              onChangeText={setPiva}
-              keyboardType="numeric"
-              maxLength={11}
-              editable={!loading}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[buttonStyles.primary, styles.associateButton]}
-            onPress={handleAssociate}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.card} />
-            ) : (
-              <Text style={buttonStyles.text}>Associa</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {loadingCompanies ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Caricamento aziende...</Text>
-          </View>
-        ) : associatedCompanies.length > 0 ? (
-          <View style={styles.companiesSection}>
-            <Text style={styles.sectionTitle}>Aziende Associate</Text>
-            <FlatList
-              data={associatedCompanies}
-              renderItem={renderCompanyItem}
-              keyExtractor={(item) => item.idAzienda}
-              scrollEnabled={false}
-            />
-
-            <TouchableOpacity
-              style={[buttonStyles.primary, styles.continueButton]}
-              onPress={handleContinue}
-            >
-              <Text style={buttonStyles.text}>Prosegui</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
-        <View style={styles.infoBox}>
-          <IconSymbol name="info.circle.fill" size={20} color={colors.primary} />
-          <Text style={styles.infoText}>
-            Le Partite IVA disponibili sono caricate da Google Sheets
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+import React, { useState, useEffect } from 'react';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollContent: {
+  content: {
+    flex: 1,
     padding: 24,
   },
   header: {
@@ -208,20 +33,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: colors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     color: colors.textSecondary,
-    lineHeight: 24,
-  },
-  form: {
-    marginBottom: 32,
   },
   inputContainer: {
-    marginBottom: 8,
+    marginBottom: 24,
   },
   label: {
     fontSize: 14,
@@ -229,45 +50,55 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 8,
   },
-  associateButton: {
-    marginTop: 8,
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  loadingContainer: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  loadingText: {
-    marginTop: 16,
+  input: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
-    color: colors.textSecondary,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  associateButton: {
+    ...buttonStyles.primary,
+    paddingHorizontal: 24,
+  },
+  associateButtonText: {
+    ...buttonStyles.primaryText,
   },
   companiesSection: {
-    marginBottom: 32,
+    flex: 1,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 16,
   },
   companyCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-    elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   companyIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.highlight,
-    justifyContent: 'center',
+    backgroundColor: colors.primary + '20',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'center',
+    marginRight: 16,
   },
   companyInfo: {
     flex: 1,
@@ -282,21 +113,177 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
   },
-  continueButton: {
-    marginTop: 16,
-  },
-  infoBox: {
-    padding: 16,
-    backgroundColor: colors.highlight,
-    borderRadius: 8,
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    paddingVertical: 48,
   },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
+  emptyStateText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  continueButton: {
+    ...buttonStyles.primary,
+  },
+  continueButtonText: {
+    ...buttonStyles.primaryText,
   },
 });
+
+export default function AssociatePivaScreen() {
+  const [piva, setPiva] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    loadAssociatedCompanies();
+  }, []);
+
+  const loadAssociatedCompanies = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingCompanies(true);
+      const userCompanies = await supabaseService.getCompaniesByClientId(user.idCliente);
+      console.log('Loaded companies:', userCompanies.length);
+      setCompanies(userCompanies);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      Alert.alert('Errore', 'Impossibile caricare le aziende associate');
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
+
+  const handleAssociate = async () => {
+    if (!piva.trim()) {
+      Alert.alert('Errore', 'Inserisci una Partita IVA');
+      return;
+    }
+
+    if (!user) {
+      Alert.alert('Errore', 'Utente non autenticato');
+      return;
+    }
+
+    // Basic P.IVA validation (11 digits)
+    if (!/^\d{11}$/.test(piva.trim())) {
+      Alert.alert('Errore', 'La Partita IVA deve contenere 11 cifre');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await supabaseService.associateCompanyToClient(piva.trim(), user.idCliente);
+      
+      Alert.alert('Successo', 'Azienda associata correttamente');
+      setPiva('');
+      await loadAssociatedCompanies();
+    } catch (error: any) {
+      console.error('Error associating company:', error);
+      Alert.alert('Errore', error.message || 'Impossibile associare l\'azienda');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContinue = () => {
+    if (companies.length === 0) {
+      Alert.alert('Attenzione', 'Devi associare almeno una Partita IVA per continuare');
+      return;
+    }
+
+    router.replace('/(tabs)/(home)');
+  };
+
+  const renderCompanyItem = ({ item }: { item: Company }) => (
+    <View style={styles.companyCard}>
+      <View style={styles.companyIcon}>
+        <IconSymbol name="business" size={24} color={colors.primary} />
+      </View>
+      <View style={styles.companyInfo}>
+        <Text style={styles.companyName}>{item.denominazione}</Text>
+        <Text style={styles.companyPiva}>P.IVA: {item.partitaIva}</Text>
+      </View>
+      <IconSymbol name="check-circle" size={24} color={colors.success} />
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Associa Partita IVA</Text>
+          <Text style={styles.subtitle}>
+            Inserisci la Partita IVA della tua azienda per accedere ai documenti e alle scadenze
+          </Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Partita IVA</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              placeholder="Inserisci P.IVA (11 cifre)"
+              placeholderTextColor={colors.textSecondary}
+              value={piva}
+              onChangeText={setPiva}
+              keyboardType="numeric"
+              maxLength={11}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={styles.associateButton}
+              onPress={handleAssociate}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.associateButtonText}>Associa</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.companiesSection}>
+          <Text style={styles.sectionTitle}>Aziende Associate</Text>
+          
+          {loadingCompanies ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : companies.length === 0 ? (
+            <View style={styles.emptyState}>
+              <IconSymbol name="business" size={48} color={colors.textSecondary} />
+              <Text style={styles.emptyStateText}>
+                Nessuna azienda associata.{'\n'}Inserisci una Partita IVA per iniziare.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={companies}
+              renderItem={renderCompanyItem}
+              keyExtractor={(item) => item.idAzienda}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
+
+        {companies.length > 0 && (
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={handleContinue}
+          >
+            <Text style={styles.continueButtonText}>Prosegui</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

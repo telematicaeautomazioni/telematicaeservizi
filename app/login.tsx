@@ -1,5 +1,9 @@
 
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
+import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
+import { IconSymbol } from '@/components/IconSymbol';
+import { router } from 'expo-router';
 import {
   View,
   Text,
@@ -12,229 +16,36 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
+import { supabaseService } from '@/services/supabaseService';
 import { useAuth } from '@/contexts/AuthContext';
-import { IconSymbol } from '@/components/IconSymbol';
-import { googleSheetsService } from '@/services/googleSheetsService';
-import { useGoogleSheets } from '@/contexts/GoogleSheetsContext';
-
-export default function LoginScreen() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login, setIsFirstAccess } = useAuth();
-  const { isAuthenticated, authenticate } = useGoogleSheets();
-
-  const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert('Errore', 'Inserisci nome utente e password');
-      return;
-    }
-
-    setLoading(true);
-    console.log('Attempting login for:', username);
-
-    try {
-      // Prima verifica se siamo autenticati con Google Sheets
-      if (!isAuthenticated) {
-        Alert.alert(
-          'Connessione Google Sheets',
-          'Per accedere, devi prima connetterti a Google Sheets',
-          [
-            {
-              text: 'Annulla',
-              style: 'cancel',
-              onPress: () => setLoading(false),
-            },
-            {
-              text: 'Connetti',
-              onPress: async () => {
-                const success = await authenticate();
-                if (success) {
-                  // Riprova il login dopo l'autenticazione
-                  await performLogin();
-                } else {
-                  Alert.alert('Errore', 'Impossibile connettersi a Google Sheets');
-                  setLoading(false);
-                }
-              },
-            },
-          ]
-        );
-        return;
-      }
-
-      await performLogin();
-    } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Errore', 'Si è verificato un errore durante il login');
-      setLoading(false);
-    }
-  };
-
-  const performLogin = async () => {
-    try {
-      // Cerca l'utente nel foglio Google Sheets
-      const user = await googleSheetsService.getClientByUsername(username);
-
-      if (user && user.password === password) {
-        console.log('Login successful for:', user.nomeCompleto);
-        
-        // Verifica se l'utente ha aziende associate
-        const companies = await googleSheetsService.getCompaniesByClientId(user.idCliente);
-        const hasCompanies = companies.length > 0;
-
-        login(user);
-        
-        if (!hasCompanies) {
-          console.log('First access - redirecting to association');
-          setIsFirstAccess(true);
-          router.replace('/associate-piva');
-        } else {
-          console.log('Redirecting to dashboard');
-          router.replace('/(tabs)/(home)');
-        }
-      } else {
-        console.log('Login failed - invalid credentials');
-        Alert.alert('Errore', 'Nome utente o password non validi');
-      }
-    } catch (error) {
-      console.error('Error during login:', error);
-      Alert.alert(
-        'Errore',
-        'Impossibile verificare le credenziali. Controlla la connessione a Google Sheets.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <IconSymbol name="building.2.fill" size={60} color={colors.primary} />
-            </View>
-            <Text style={styles.title}>Studio Commerciale</Text>
-            <Text style={styles.subtitle}>Gestione Documenti F24</Text>
-          </View>
-
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Nome Utente</Text>
-              <TextInput
-                style={commonStyles.input}
-                placeholder="Inserisci nome utente"
-                placeholderTextColor={colors.textSecondary}
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={commonStyles.input}
-                placeholder="Inserisci password"
-                placeholderTextColor={colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[buttonStyles.primary, styles.loginButton]}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.card} />
-              ) : (
-                <Text style={buttonStyles.text}>Accedi</Text>
-              )}
-            </TouchableOpacity>
-
-            {!isAuthenticated && (
-              <View style={styles.warningBox}>
-                <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.warning} />
-                <Text style={styles.warningText}>
-                  Non sei connesso a Google Sheets. Clicca su Accedi per connetterti.
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                I dati vengono caricati direttamente da Google Sheets
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  keyboardView: {
-    flex: 1,
-  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    padding: 24,
   },
-  header: {
+  logoContainer: {
     alignItems: 'center',
     marginBottom: 48,
   },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.highlight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginTop: 16,
   },
   subtitle: {
     fontSize: 16,
     color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  form: {
-    width: '100%',
+    marginTop: 8,
   },
   inputContainer: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
   label: {
     fontSize: 14,
@@ -242,34 +53,156 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 8,
   },
-  loginButton: {
-    marginTop: 8,
-  },
-  warningBox: {
-    marginTop: 16,
+  input: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
     padding: 16,
-    backgroundColor: colors.highlight,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.warning,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  infoBox: {
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: colors.highlight,
-    borderRadius: 8,
+  inputFocused: {
+    borderColor: colors.primary,
   },
-  infoText: {
+  loginButton: {
+    ...buttonStyles.primary,
+    marginTop: 24,
+  },
+  loginButtonText: {
+    ...buttonStyles.primaryText,
+  },
+  errorText: {
+    color: colors.error,
     fontSize: 14,
-    color: colors.textSecondary,
+    marginTop: 8,
     textAlign: 'center',
   },
 });
+
+export default function LoginScreen() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [usernameFocused, setUsernameFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const { login, setIsFirstAccess } = useAuth();
+
+  const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      setError('Inserisci nome utente e password');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await performLogin();
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Errore durante il login. Riprova.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const performLogin = async () => {
+    try {
+      const user = await supabaseService.login(username.trim(), password);
+
+      if (!user) {
+        setError('Nome utente o password non corretti');
+        return;
+      }
+
+      // Login successful
+      login(user);
+
+      // Check if user has associated companies
+      const companies = await supabaseService.getCompaniesByClientId(user.idCliente);
+
+      if (companies.length === 0) {
+        // First access - redirect to P.IVA association
+        setIsFirstAccess(true);
+        router.replace('/associate-piva');
+      } else {
+        // User has companies - go to dashboard
+        setIsFirstAccess(false);
+        router.replace('/(tabs)/(home)');
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+      throw error;
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.logoContainer}>
+            <IconSymbol name="business" size={64} color={colors.primary} />
+            <Text style={styles.title}>Studio Commerciale</Text>
+            <Text style={styles.subtitle}>Gestione Documenti e F24</Text>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Nome Utente</Text>
+            <TextInput
+              style={[styles.input, usernameFocused && styles.inputFocused]}
+              placeholder="Inserisci il tuo nome utente"
+              placeholderTextColor={colors.textSecondary}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              onFocus={() => setUsernameFocused(true)}
+              onBlur={() => setUsernameFocused(false)}
+              editable={!loading}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={[styles.input, passwordFocused && styles.inputFocused]}
+              placeholder="Inserisci la tua password"
+              placeholderTextColor={colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+              editable={!loading}
+              onSubmitEditing={handleLogin}
+            />
+          </View>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.loginButtonText}>Accedi</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
