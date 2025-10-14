@@ -1,21 +1,25 @@
 
 import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
+// Telematica E Servizi brand colors
 export const colors = {
-  primary: '#2563eb',
-  secondary: '#64748b',
-  background: '#f8fafc',
+  primary: '#5A7A81', // Teal/blue-gray from logo
+  primaryDark: '#4A6A71',
+  primaryLight: '#6A8A91',
+  secondary: '#E8E4D9', // Cream from logo
+  background: '#F5F5F0',
   card: '#ffffff',
-  text: '#1e293b',
+  text: '#2C3E50',
   textSecondary: '#64748b',
-  border: '#e2e8f0',
+  border: '#D1D5DB',
   error: '#dc2626',
   errorLight: '#fee2e2',
   success: '#16a34a',
   successLight: '#dcfce7',
   warning: '#f59e0b',
   warningLight: '#fef3c7',
-  highlight: '#eff6ff',
+  highlight: '#E8F4F5',
+  surface: '#ffffff',
 };
 
 export const commonStyles = StyleSheet.create({
@@ -30,7 +34,7 @@ export const commonStyles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)',
+    boxShadow: '0px 2px 4px rgba(90, 122, 129, 0.1)',
     elevation: 2,
   },
   title: {
@@ -66,22 +70,22 @@ export const buttonStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryText: {
-    color: colors.card,
+    color: colors.secondary,
     fontSize: 16,
     fontWeight: '600',
   },
   secondary: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.secondary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary,
   },
   secondaryText: {
-    color: colors.text,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

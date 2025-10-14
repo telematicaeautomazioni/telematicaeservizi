@@ -16,6 +16,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -29,9 +30,9 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primary,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.primaryDark,
   },
   headerTop: {
     flexDirection: 'row',
@@ -39,24 +40,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    width: 40,
+    height: 40,
+    marginRight: 12,
+  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.secondary,
   },
   accountButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.secondary + '30',
   },
   companySelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primaryLight,
   },
   companySelectorText: {
     flex: 1,
@@ -66,7 +76,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -74,7 +84,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
   tabActive: {
@@ -248,7 +258,7 @@ export default function HomeScreen() {
             style={{ marginTop: 24, padding: 12, backgroundColor: colors.primary, borderRadius: 8 }}
             onPress={() => router.push('/account-management')}
           >
-            <Text style={{ color: '#fff', fontWeight: '600' }}>Gestione Account</Text>
+            <Text style={{ color: colors.secondary, fontWeight: '600' }}>Gestione Account</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -261,12 +271,19 @@ export default function HomeScreen() {
       
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Dashboard</Text>
+          <View style={styles.headerTitleContainer}>
+            <Image
+              source={require('@/assets/images/c64fce72-61c9-461d-ae06-0380f4682de5.jpeg')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerTitle}>Telematica E Servizi</Text>
+          </View>
           <TouchableOpacity
             style={styles.accountButton}
             onPress={() => router.push('/account-management')}
           >
-            <IconSymbol name="settings" size={24} color={colors.primary} />
+            <IconSymbol name="settings" size={24} color={colors.secondary} />
           </TouchableOpacity>
         </View>
 

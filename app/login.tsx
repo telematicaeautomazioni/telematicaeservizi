@@ -2,7 +2,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
 import { router } from 'expo-router';
 import {
   View,
@@ -15,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { supabaseService } from '@/services/supabaseService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,16 +33,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 16,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: colors.primary,
-    marginTop: 16,
+    marginTop: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: colors.textSecondary,
     marginTop: 8,
+    textAlign: 'center',
   },
   inputContainer: {
     marginBottom: 16,
@@ -54,7 +61,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -64,6 +71,7 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: colors.primary,
+    borderWidth: 2,
   },
   loginButton: {
     ...buttonStyles.primary,
@@ -149,8 +157,12 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoContainer}>
-            <IconSymbol name="business" size={64} color={colors.primary} />
-            <Text style={styles.title}>Studio Commerciale</Text>
+            <Image
+              source={require('@/assets/images/c64fce72-61c9-461d-ae06-0380f4682de5.jpeg')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Telematica E Servizi</Text>
             <Text style={styles.subtitle}>Gestione Documenti e F24</Text>
           </View>
 
@@ -196,7 +208,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.secondary} />
             ) : (
               <Text style={styles.loginButtonText}>Accedi</Text>
             )}

@@ -1,9 +1,4 @@
 
-import { Stack, router } from 'expo-router';
-import { Company } from '@/types';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
-import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
 import {
   View,
   Text,
@@ -13,11 +8,17 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
-import { IconSymbol } from '@/components/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
-import React, { useState, useEffect, useCallback } from 'react';
+import { Company } from '@/types';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabaseService } from '@/services/supabaseService';
+import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
+import { Stack, router } from 'expo-router';
+import { IconSymbol } from '@/components/IconSymbol';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const styles = StyleSheet.create({
   container: {
@@ -28,21 +29,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primary,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.primaryDark,
   },
   backButton: {
     padding: 8,
+    marginRight: 12,
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerLogo: {
+    width: 32,
+    height: 32,
     marginRight: 8,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
+    fontWeight: 'bold',
+    color: colors.secondary,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
     padding: 16,
   },
   section: {
@@ -54,16 +64,23 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 16,
   },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 12,
+  card: {
+    ...commonStyles.card,
+    backgroundColor: colors.card,
+  },
+  inputContainer: {
     marginBottom: 16,
   },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
   input: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
     color: colors.text,
     borderWidth: 1,
@@ -71,29 +88,21 @@ const styles = StyleSheet.create({
   },
   addButton: {
     ...buttonStyles.primary,
-    paddingHorizontal: 24,
+    marginTop: 8,
   },
   addButtonText: {
     ...buttonStyles.primaryText,
   },
-  companyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  companyItem: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 16,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  companyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
   },
   companyInfo: {
     flex: 1,
@@ -110,49 +119,51 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 8,
+    backgroundColor: colors.errorLight,
+    borderRadius: 8,
+  },
+  logoutButton: {
+    ...buttonStyles.danger,
+    marginTop: 16,
+  },
+  logoutButtonText: {
+    ...buttonStyles.dangerText,
   },
   emptyState: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
+    padding: 32,
   },
   emptyStateText: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 12,
+    marginTop: 8,
     textAlign: 'center',
-  },
-  logoutButton: {
-    ...buttonStyles.secondary,
-    backgroundColor: colors.error,
-    marginTop: 'auto',
-  },
-  logoutButtonText: {
-    ...buttonStyles.secondaryText,
-    color: '#fff',
   },
 });
 
 export default function AccountManagementScreen() {
   const { user, logout } = useAuth();
-  const [piva, setPiva] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [newPiva, setNewPiva] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
 
   const loadUserCompanies = useCallback(async () => {
     if (!user) return;
 
     try {
-      setLoadingCompanies(true);
+      setLoading(true);
+      console.log('Loading companies for user:', user.idCliente);
+      
       const userCompanies = await supabaseService.getCompaniesByClientId(user.idCliente);
-      console.log('Loaded user companies:', userCompanies.length);
+      console.log('Loaded companies:', userCompanies.length);
+      
       setCompanies(userCompanies);
     } catch (error) {
       console.error('Error loading companies:', error);
       Alert.alert('Errore', 'Impossibile caricare le aziende');
     } finally {
-      setLoadingCompanies(false);
+      setLoading(false);
     }
   }, [user]);
 
@@ -161,48 +172,67 @@ export default function AccountManagementScreen() {
   }, [loadUserCompanies]);
 
   const validatePiva = (piva: string): boolean => {
-    return /^\d{11}$/.test(piva.trim());
+    // Remove spaces and convert to uppercase
+    const cleanPiva = piva.replace(/\s/g, '').toUpperCase();
+    
+    // Italian P.IVA is 11 digits
+    if (!/^\d{11}$/.test(cleanPiva)) {
+      return false;
+    }
+    
+    return true;
   };
 
   const handleAddPiva = async () => {
-    if (!piva.trim()) {
+    if (!newPiva.trim()) {
       Alert.alert('Errore', 'Inserisci una Partita IVA');
       return;
     }
 
-    if (!validatePiva(piva)) {
-      Alert.alert('Errore', 'La Partita IVA deve contenere 11 cifre');
+    const cleanPiva = newPiva.replace(/\s/g, '').toUpperCase();
+
+    if (!validatePiva(cleanPiva)) {
+      Alert.alert('Errore', 'Partita IVA non valida. Deve essere di 11 cifre.');
       return;
     }
-
-    if (!user) {
-      Alert.alert('Errore', 'Utente non autenticato');
-      return;
-    }
-
-    setLoading(true);
 
     try {
-      await supabaseService.associateCompanyToClient(piva.trim(), user.idCliente);
-      
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Successo', 'Azienda associata correttamente');
-      setPiva('');
+      setAdding(true);
+      console.log('Adding P.IVA:', cleanPiva);
+
+      // Check if company exists
+      const company = await supabaseService.getCompanyByPiva(cleanPiva);
+
+      if (!company) {
+        Alert.alert('Errore', 'Azienda non trovata con questa Partita IVA');
+        return;
+      }
+
+      // Check if already associated
+      if (company.idClienteAssociato) {
+        Alert.alert('Errore', 'Questa Partita IVA è già associata a un altro account');
+        return;
+      }
+
+      // Associate company with user
+      await supabaseService.associateCompanyWithClient(cleanPiva, user!.idCliente);
+
+      Alert.alert('Successo', 'Partita IVA associata correttamente');
+      setNewPiva('');
       await loadUserCompanies();
-    } catch (error: any) {
-      console.error('Error adding company:', error);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Errore', error.message || 'Impossibile associare l\'azienda');
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error adding P.IVA:', error);
+      Alert.alert('Errore', 'Impossibile associare la Partita IVA');
     } finally {
-      setLoading(false);
+      setAdding(false);
     }
   };
 
   const handleRemovePiva = async (company: Company) => {
-    if (!user) return;
-
     Alert.alert(
-      'Conferma Rimozione',
+      'Conferma',
       `Vuoi rimuovere l'associazione con ${company.denominazione}?`,
       [
         { text: 'Annulla', style: 'cancel' },
@@ -211,14 +241,16 @@ export default function AccountManagementScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await supabaseService.removeCompanyAssociation(company.partitaIva, user.idCliente);
+              console.log('Removing P.IVA:', company.partitaIva);
               
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert('Successo', 'Associazione rimossa');
+              await supabaseService.disassociateCompanyFromClient(company.partitaIva);
+              
+              Alert.alert('Successo', 'Associazione rimossa correttamente');
               await loadUserCompanies();
+              
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
-              console.error('Error removing company:', error);
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              console.error('Error removing P.IVA:', error);
               Alert.alert('Errore', 'Impossibile rimuovere l\'associazione');
             }
           },
@@ -228,19 +260,21 @@ export default function AccountManagementScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Conferma Logout', 'Sei sicuro di voler uscire?', [
-      { text: 'Annulla', style: 'cancel' },
-      {
-        text: 'Esci',
-        style: 'destructive',
-        onPress: async () => {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          await supabaseService.logout();
-          logout();
-          router.replace('/login');
+    Alert.alert(
+      'Conferma',
+      'Vuoi effettuare il logout?',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            router.replace('/login');
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   return (
@@ -248,33 +282,46 @@ export default function AccountManagementScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <IconSymbol name="arrow-back" size={24} color={colors.text} />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <IconSymbol name="arrow-back" size={24} color={colors.secondary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gestione Account</Text>
+        <View style={styles.headerTitleContainer}>
+          <Image
+            source={require('@/assets/images/c64fce72-61c9-461d-ae06-0380f4682de5.jpeg')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>Gestione Account</Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Aggiungi Partita IVA</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="Inserisci P.IVA (11 cifre)"
-              placeholderTextColor={colors.textSecondary}
-              value={piva}
-              onChangeText={setPiva}
-              keyboardType="numeric"
-              maxLength={11}
-              editable={!loading}
-            />
+          <View style={styles.card}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Partita IVA</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Inserisci la Partita IVA (11 cifre)"
+                placeholderTextColor={colors.textSecondary}
+                value={newPiva}
+                onChangeText={setNewPiva}
+                keyboardType="numeric"
+                maxLength={11}
+                editable={!adding}
+              />
+            </View>
             <TouchableOpacity
               style={styles.addButton}
               onPress={handleAddPiva}
-              disabled={loading}
+              disabled={adding}
             >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
+              {adding ? (
+                <ActivityIndicator color={colors.secondary} />
               ) : (
                 <Text style={styles.addButtonText}>Aggiungi</Text>
               )}
@@ -284,8 +331,7 @@ export default function AccountManagementScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Aziende Associate</Text>
-          
-          {loadingCompanies ? (
+          {loading ? (
             <View style={styles.emptyState}>
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
@@ -298,10 +344,7 @@ export default function AccountManagementScreen() {
             </View>
           ) : (
             companies.map((company) => (
-              <View key={company.idAzienda} style={styles.companyCard}>
-                <View style={styles.companyIcon}>
-                  <IconSymbol name="business" size={24} color={colors.primary} />
-                </View>
+              <View key={company.idAzienda} style={styles.companyItem}>
                 <View style={styles.companyInfo}>
                   <Text style={styles.companyName}>{company.denominazione}</Text>
                   <Text style={styles.companyPiva}>P.IVA: {company.partitaIva}</Text>
@@ -310,16 +353,28 @@ export default function AccountManagementScreen() {
                   style={styles.removeButton}
                   onPress={() => handleRemovePiva(company)}
                 >
-                  <IconSymbol name="delete" size={24} color={colors.error} />
+                  <IconSymbol name="delete" size={20} color={colors.error} />
                 </TouchableOpacity>
               </View>
             ))
           )}
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Esci</Text>
-        </TouchableOpacity>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <View style={styles.card}>
+            <Text style={styles.label}>Utente</Text>
+            <Text style={{ fontSize: 16, color: colors.text, marginBottom: 16 }}>
+              {user?.nomeUtente}
+            </Text>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+            >
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

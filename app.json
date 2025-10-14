@@ -1,34 +1,35 @@
+
 {
   "expo": {
-    "name": "Natively",
-    "slug": "Natively",
+    "name": "Telematica E Servizi",
+    "slug": "telematica-e-servizi",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/natively-dark.png",
+    "icon": "./assets/images/c64fce72-61c9-461d-ae06-0380f4682de5.jpeg",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/natively-dark.png",
+      "image": "./assets/images/c64fce72-61c9-461d-ae06-0380f4682de5.jpeg",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#5A7A81"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Natively",
+      "bundleIdentifier": "com.telematicaeservizi.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/natively-dark.png",
-        "backgroundColor": "#000000"
+        "foregroundImage": "./assets/images/c64fce72-61c9-461d-ae06-0380f4682de5.jpeg",
+        "backgroundColor": "#5A7A81"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Natively"
+      "package": "com.telematicaeservizi.app"
     },
     "web": {
-      "favicon": "./assets/images/final_quest_240x240.png",
+      "favicon": "./assets/images/c64fce72-61c9-461d-ae06-0380f4682de5.jpeg",
       "bundler": "metro"
     },
     "plugins": [
@@ -36,7 +37,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "natively",
+    "scheme": "telematicaeservizi",
     "experiments": {
       "typedRoutes": true
     },
