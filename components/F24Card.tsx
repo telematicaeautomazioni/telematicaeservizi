@@ -27,14 +27,12 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
 
   const getStatusColor = (status: F24['stato']) => {
     switch (status) {
-      case 'Da Pagare':
-        return colors.error;
-      case 'Pagato':
+      case 'In attesa di risposta':
+        return colors.warning;
+      case 'Confermato':
         return colors.success;
       case 'Rifiutato':
-        return colors.textSecondary;
-      case 'Pagato Parzialmente':
-        return colors.warning;
+        return colors.error;
       default:
         return colors.textSecondary;
     }
@@ -43,7 +41,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
   const handleAccept = () => {
     Alert.alert(
       'Conferma Pagamento',
-      `Confermi di voler pagare €${f24.importo.toFixed(2)}?`,
+      `Confermi di voler accettare il pagamento di €${f24.importo.toFixed(2)}?`,
       [
         { text: 'Annulla', style: 'cancel' },
         {
@@ -52,7 +50,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
             console.log('Accepting F24:', f24.idF24);
             setLoading(true);
             setTimeout(() => {
-              onUpdate(f24.idF24, { stato: 'Pagato' });
+              onUpdate(f24.idF24, { stato: 'Confermato' });
               setLoading(false);
               Alert.alert('Successo', 'Pagamento confermato');
             }, 500);
@@ -96,13 +94,13 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
     setLoading(true);
     setTimeout(() => {
       onUpdate(f24.idF24, {
-        stato: 'Pagato Parzialmente',
+        stato: 'Confermato',
         importoPagato: amount,
       });
       setLoading(false);
       setShowPartialModal(false);
       setPartialAmount('');
-      Alert.alert('Successo', `Pagamento parziale di €${amount.toFixed(2)} registrato`);
+      Alert.alert('Successo', `Pagamento parziale di €${amount.toFixed(2)} confermato`);
     }, 500);
   };
 
@@ -128,7 +126,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
           <View style={styles.headerLeft}>
             <Text style={styles.description}>{f24.descrizione}</Text>
             <Text style={styles.amount}>€{f24.importo.toFixed(2)}</Text>
-            {f24.stato === 'Pagato Parzialmente' && f24.importoPagato && (
+            {f24.stato === 'Confermato' && f24.importoPagato && f24.importoPagato < f24.importo && (
               <Text style={styles.partialAmount}>
                 Pagato: €{f24.importoPagato.toFixed(2)}
               </Text>
@@ -144,7 +142,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
           <Text style={styles.pdfButtonText}>Apri PDF</Text>
         </TouchableOpacity>
 
-        {f24.stato === 'Da Pagare' && (
+        {f24.stato === 'In attesa di risposta' && (
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.actionButton, styles.acceptButton]}

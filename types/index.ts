@@ -19,7 +19,7 @@ export interface F24 {
   descrizione: string;
   importo: number;
   linkPdf: string;
-  stato: 'Da Pagare' | 'Pagato' | 'Rifiutato' | 'Pagato Parzialmente';
+  stato: 'In attesa di risposta' | 'Confermato' | 'Rifiutato';
   importoPagato?: number;
 }
 
