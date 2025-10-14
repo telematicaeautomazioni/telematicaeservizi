@@ -163,45 +163,51 @@ export default function AssociatePivaScreen() {
 
   const handleAssociate = async () => {
     if (!piva.trim()) {
-      Alert.alert('Errore', 'Inserisci una Partita IVA');
+      Alert.alert('Errore', 'Inserisci una Partita IVA o un Codice Fiscale');
       return;
     }
 
     const cleanPiva = piva.replace(/\s/g, '').toUpperCase();
 
-    // Validate P.IVA format (11 digits for Italian P.IVA)
-    if (!/^\d{11}$/.test(cleanPiva)) {
-      Alert.alert('Errore', 'Partita IVA non valida. Deve essere di 11 cifre.');
+    // Validate P.IVA format (11 digits) or CF format (16 alphanumeric characters)
+    const isPivaValid = /^\d{11}$/.test(cleanPiva);
+    const isCfValid = /^[A-Z0-9]{16}$/.test(cleanPiva);
+
+    if (!isPivaValid && !isCfValid) {
+      Alert.alert(
+        'Errore', 
+        'Formato non valido. Inserisci una Partita IVA (11 cifre) o un Codice Fiscale (16 caratteri alfanumerici).'
+      );
       return;
     }
 
     try {
       setLoading(true);
-      console.log('Associating P.IVA:', cleanPiva);
+      console.log('Associating P.IVA/CF:', cleanPiva);
 
       // Check if company exists
       const company = await supabaseService.getCompanyByPiva(cleanPiva);
 
       if (!company) {
-        Alert.alert('Errore', 'Azienda non trovata con questa Partita IVA');
+        Alert.alert('Errore', 'Azienda non trovata con questa Partita IVA o Codice Fiscale');
         return;
       }
 
       // Check if already associated
       if (company.idClienteAssociato) {
-        Alert.alert('Errore', 'Questa Partita IVA è già associata a un altro account');
+        Alert.alert('Errore', 'Questa Partita IVA o Codice Fiscale è già associato a un altro account');
         return;
       }
 
       // Associate company with user
       await supabaseService.associateCompanyToClient(cleanPiva, user!.idCliente);
 
-      Alert.alert('Successo', 'Partita IVA associata correttamente');
+      Alert.alert('Successo', 'Partita IVA o Codice Fiscale associato correttamente');
       setPiva('');
       await loadAssociatedCompanies();
     } catch (error) {
-      console.error('Error associating P.IVA:', error);
-      Alert.alert('Errore', 'Impossibile associare la Partita IVA');
+      console.error('Error associating P.IVA/CF:', error);
+      Alert.alert('Errore', 'Impossibile associare la Partita IVA o il Codice Fiscale');
     } finally {
       setLoading(false);
     }
@@ -209,7 +215,7 @@ export default function AssociatePivaScreen() {
 
   const handleContinue = () => {
     if (associatedCompanies.length === 0) {
-      Alert.alert('Attenzione', 'Devi associare almeno una Partita IVA per continuare');
+      Alert.alert('Attenzione', 'Devi associare almeno una Partita IVA o un Codice Fiscale per continuare');
       return;
     }
 
@@ -221,7 +227,7 @@ export default function AssociatePivaScreen() {
       <IconSymbol name="business" size={24} color={colors.primary} />
       <View style={styles.companyInfo}>
         <Text style={styles.companyName}>{item.denominazione}</Text>
-        <Text style={styles.companyPiva}>P.IVA: {item.partitaIva}</Text>
+        <Text style={styles.companyPiva}>P.IVA/CF: {item.partitaIva}</Text>
       </View>
       <IconSymbol name="check-circle" size={24} color={colors.success} />
     </View>
@@ -238,21 +244,22 @@ export default function AssociatePivaScreen() {
           />
           <Text style={styles.title}>Associa Partite IVA</Text>
           <Text style={styles.subtitle}>
-            Inserisci le Partite IVA delle tue aziende per accedere ai documenti
+            Inserisci le Partite IVA delle tue aziende, o il tuo codice fiscale, per accedere ai documenti
           </Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Partita IVA</Text>
+            <Text style={styles.label}>Partita IVA o Codice Fiscale</Text>
             <TextInput
               style={styles.input}
-              placeholder="Inserisci la Partita IVA (11 cifre)"
+              placeholder="Inserisci P.IVA (11 cifre) o CF (16 caratteri)"
               placeholderTextColor={colors.textSecondary}
               value={piva}
               onChangeText={setPiva}
-              keyboardType="numeric"
-              maxLength={11}
+              keyboardType="default"
+              autoCapitalize="characters"
+              maxLength={20}
               editable={!loading}
             />
           </View>
@@ -279,7 +286,7 @@ export default function AssociatePivaScreen() {
             <View style={styles.emptyState}>
               <IconSymbol name="business" size={48} color={colors.textSecondary} />
               <Text style={styles.emptyStateText}>
-                Nessuna azienda associata.{'\n'}Inserisci una Partita IVA per iniziare.
+                Nessuna azienda associata.{'\n'}Inserisci una Partita IVA o un Codice Fiscale per iniziare.
               </Text>
             </View>
           ) : (
