@@ -2,58 +2,21 @@
 import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
 export const colors = {
-  background: '#F5F5F5',
-  text: '#212121',
-  textSecondary: '#757575',
-  primary: '#2196F3',
-  secondary: '#03A9F4',
-  accent: '#FFC107',
-  card: '#FFFFFF',
-  highlight: '#BBDEFB',
-  success: '#4CAF50',
-  error: '#F44336',
-  warning: '#FF9800',
-  border: '#E0E0E0',
+  primary: '#2563eb',
+  secondary: '#64748b',
+  background: '#f8fafc',
+  card: '#ffffff',
+  text: '#1e293b',
+  textSecondary: '#64748b',
+  border: '#e2e8f0',
+  error: '#dc2626',
+  errorLight: '#fee2e2',
+  success: '#16a34a',
+  successLight: '#dcfce7',
+  warning: '#f59e0b',
+  warningLight: '#fef3c7',
+  highlight: '#eff6ff',
 };
-
-export const buttonStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondary: {
-    backgroundColor: colors.secondary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    color: colors.card,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  textOutline: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 
 export const commonStyles = StyleSheet.create({
   container: {
@@ -65,7 +28,9 @@ export const commonStyles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)',
     elevation: 2,
   },
   title: {
@@ -75,41 +40,62 @@ export const commonStyles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  text: {
     fontSize: 16,
-    color: colors.text,
-    lineHeight: 24,
-  },
-  textSecondary: {
-    fontSize: 14,
     color: colors.textSecondary,
-    lineHeight: 20,
+    marginBottom: 16,
   },
   input: {
     backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 12,
     fontSize: 16,
     color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
     marginBottom: 16,
   },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
+});
+
+export const buttonStyles = StyleSheet.create({
+  primary: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+  primaryText: {
     color: colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondary: {
+    backgroundColor: colors.background,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  secondaryText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  danger: {
+    backgroundColor: colors.error,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerText: {
+    color: colors.card,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -54,20 +54,6 @@ export default function HomeScreen() {
     setLoading(false);
   }, [user]);
 
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
-      { text: 'Annulla', style: 'cancel' },
-      {
-        text: 'Esci',
-        style: 'destructive',
-        onPress: () => {
-          logout();
-          router.replace('/login');
-        },
-      },
-    ]);
-  };
-
   const handleUpdateF24 = (id: string, updates: Partial<F24>) => {
     setF24List((prev) =>
       prev.map((f24) => (f24.idF24 === id ? { ...f24, ...updates } : f24))
@@ -93,6 +79,20 @@ export default function HomeScreen() {
   if (companies.length === 0) {
     return (
       <SafeAreaView style={commonStyles.container}>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: 'Dashboard',
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() => router.push('/account-management')}
+                style={styles.headerButton}
+              >
+                <IconSymbol name="person.circle" size={28} color={colors.primary} />
+              </TouchableOpacity>
+            ),
+          }}
+        />
         <View style={styles.emptyState}>
           <IconSymbol name="building.2" size={64} color={colors.textSecondary} />
           <Text style={styles.emptyTitle}>Nessuna Azienda Associata</Text>
@@ -117,8 +117,11 @@ export default function HomeScreen() {
           headerShown: true,
           title: 'Dashboard',
           headerRight: () => (
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-              <IconSymbol name="rectangle.portrait.and.arrow.right" size={24} color={colors.error} />
+            <TouchableOpacity
+              onPress={() => router.push('/account-management')}
+              style={styles.headerButton}
+            >
+              <IconSymbol name="person.circle" size={28} color={colors.primary} />
             </TouchableOpacity>
           ),
         }}
@@ -427,7 +430,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 16,
   },
-  logoutButton: {
+  headerButton: {
     padding: 8,
   },
 });
