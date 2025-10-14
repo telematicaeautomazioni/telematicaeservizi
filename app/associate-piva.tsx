@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,15 +15,36 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockCompanies } from '@/data/mockData';
 import { Company } from '@/types';
 import { IconSymbol } from '@/components/IconSymbol';
+import { googleSheetsService } from '@/services/googleSheetsService';
 
 export default function AssociatePivaScreen() {
   const [piva, setPiva] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [associatedCompanies, setAssociatedCompanies] = useState<Company[]>([]);
   const { user, setIsFirstAccess } = useAuth();
+
+  useEffect(() => {
+    loadAssociatedCompanies();
+  }, []);
+
+  const loadAssociatedCompanies = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingCompanies(true);
+      const companies = await googleSheetsService.getCompaniesByClientId(user.idCliente);
+      setAssociatedCompanies(companies);
+      console.log('Loaded associated companies:', companies.length);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      Alert.alert('Errore', 'Impossibile caricare le aziende associate');
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
 
   const handleAssociate = async () => {
     if (!piva.trim()) {
@@ -36,12 +57,17 @@ export default function AssociatePivaScreen() {
       return;
     }
 
+    if (!user) {
+      Alert.alert('Errore', 'Utente non autenticato');
+      return;
+    }
+
     setLoading(true);
     console.log('Associating P.IVA:', piva);
 
-    // Simulate API call
-    setTimeout(() => {
-      const company = mockCompanies.find((c) => c.partitaIva === piva);
+    try {
+      // Verifica se l'azienda esiste
+      const company = await googleSheetsService.getCompanyByPiva(piva);
 
       if (!company) {
         Alert.alert('Errore', 'Partita IVA non trovata');
@@ -49,24 +75,27 @@ export default function AssociatePivaScreen() {
         return;
       }
 
-      if (company.idClienteAssociato && company.idClienteAssociato !== user?.idCliente) {
+      if (company.idClienteAssociato && company.idClienteAssociato !== user.idCliente) {
         Alert.alert('Errore', 'Questa Partita IVA è già associata ad un altro cliente');
         setLoading(false);
         return;
       }
 
-      // Associate company
-      company.idClienteAssociato = user?.idCliente || null;
+      // Associa l'azienda al cliente
+      await googleSheetsService.associateCompanyToClient(piva, user.idCliente);
       
-      if (!associatedCompanies.find((c) => c.idAzienda === company.idAzienda)) {
-        setAssociatedCompanies([...associatedCompanies, company]);
-        console.log('Company associated:', company.denominazione);
-        Alert.alert('Successo', `Azienda "${company.denominazione}" associata con successo`);
-      }
+      console.log('Company associated:', company.denominazione);
+      Alert.alert('Successo', `Azienda "${company.denominazione}" associata con successo`);
 
+      // Ricarica le aziende associate
+      await loadAssociatedCompanies();
       setPiva('');
+    } catch (error) {
+      console.error('Error associating company:', error);
+      Alert.alert('Errore', 'Impossibile associare l\'azienda. Riprova.');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleContinue = () => {
@@ -131,7 +160,12 @@ export default function AssociatePivaScreen() {
           </TouchableOpacity>
         </View>
 
-        {associatedCompanies.length > 0 && (
+        {loadingCompanies ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Caricamento aziende...</Text>
+          </View>
+        ) : associatedCompanies.length > 0 ? (
           <View style={styles.companiesSection}>
             <Text style={styles.sectionTitle}>Aziende Associate</Text>
             <FlatList
@@ -148,13 +182,12 @@ export default function AssociatePivaScreen() {
               <Text style={buttonStyles.text}>Prosegui</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
 
-        <View style={styles.demoInfo}>
-          <Text style={styles.demoText}>
-            Demo P.IVA disponibili:{'\n'}
-            12345678901 (Rossi S.r.l.){'\n'}
-            11111111111 (Verdi & Co.)
+        <View style={styles.infoBox}>
+          <IconSymbol name="info.circle.fill" size={20} color={colors.primary} />
+          <Text style={styles.infoText}>
+            Le Partite IVA disponibili sono caricate da Google Sheets
           </Text>
         </View>
       </ScrollView>
@@ -198,6 +231,15 @@ const styles = StyleSheet.create({
   },
   associateButton: {
     marginTop: 8,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.textSecondary,
   },
   companiesSection: {
     marginBottom: 32,
@@ -243,12 +285,16 @@ const styles = StyleSheet.create({
   continueButton: {
     marginTop: 16,
   },
-  demoInfo: {
+  infoBox: {
     padding: 16,
     backgroundColor: colors.highlight,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  demoText: {
+  infoText: {
+    flex: 1,
     fontSize: 14,
     color: colors.text,
     lineHeight: 20,

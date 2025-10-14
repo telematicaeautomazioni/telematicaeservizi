@@ -14,22 +14,23 @@ import { Stack, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, commonStyles } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockCompanies, mockF24s, mockDocuments } from '@/data/mockData';
 import { Company, F24, Document } from '@/types';
 import F24Card from '@/components/F24Card';
 import DocumentItem from '@/components/DocumentItem';
 import { IconSymbol } from '@/components/IconSymbol';
+import { googleSheetsService } from '@/services/googleSheetsService';
 
 type TabType = 'f24' | 'documents';
 
 export default function HomeScreen() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [f24List, setF24List] = useState<F24[]>(mockF24s);
-  const [documentList] = useState<Document[]>(mockDocuments);
+  const [f24List, setF24List] = useState<F24[]>([]);
+  const [documentList, setDocumentList] = useState<Document[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('f24');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
 
   useEffect(() => {
@@ -39,39 +40,98 @@ export default function HomeScreen() {
       return;
     }
 
-    // Load user's companies
-    const userCompanies = mockCompanies.filter(
-      (c) => c.idClienteAssociato === user.idCliente
-    );
-
-    console.log('Loaded companies for user:', userCompanies.length);
-    setCompanies(userCompanies);
-
-    if (userCompanies.length > 0) {
-      setSelectedCompany(userCompanies[0]);
-    }
-
-    setLoading(false);
+    loadData();
   }, [user]);
 
-  const handleUpdateF24 = (id: string, updates: Partial<F24>) => {
-    setF24List((prev) =>
-      prev.map((f24) => (f24.idF24 === id ? { ...f24, ...updates } : f24))
-    );
+  useEffect(() => {
+    if (selectedCompany) {
+      loadCompanyData();
+    }
+  }, [selectedCompany]);
+
+  const loadData = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      console.log('Loading companies for user:', user.idCliente);
+
+      // Carica le aziende associate all'utente
+      const userCompanies = await googleSheetsService.getCompaniesByClientId(user.idCliente);
+      console.log('Loaded companies:', userCompanies.length);
+
+      setCompanies(userCompanies);
+
+      if (userCompanies.length > 0) {
+        setSelectedCompany(userCompanies[0]);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      Alert.alert('Errore', 'Impossibile caricare i dati. Verifica la connessione a Google Sheets.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredF24s = selectedCompany
-    ? f24List.filter((f24) => f24.partitaIvaAzienda === selectedCompany.partitaIva)
-    : [];
+  const loadCompanyData = async () => {
+    if (!selectedCompany) return;
 
-  const filteredDocuments = selectedCompany
-    ? documentList.filter((doc) => doc.partitaIvaAzienda === selectedCompany.partitaIva)
-    : [];
+    try {
+      setRefreshing(true);
+      console.log('Loading data for company:', selectedCompany.partitaIva);
+
+      // Carica F24 e documenti per l'azienda selezionata
+      const [f24s, documents] = await Promise.all([
+        googleSheetsService.getF24sByPiva(selectedCompany.partitaIva),
+        googleSheetsService.getDocumentsByPiva(selectedCompany.partitaIva),
+      ]);
+
+      console.log('Loaded F24s:', f24s.length, 'Documents:', documents.length);
+
+      setF24List(f24s);
+      setDocumentList(documents);
+    } catch (error) {
+      console.error('Error loading company data:', error);
+      Alert.alert('Errore', 'Impossibile caricare i dati dell\'azienda.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleUpdateF24 = async (id: string, updates: Partial<F24>) => {
+    try {
+      console.log('Updating F24:', id, updates);
+
+      // Aggiorna lo stato locale immediatamente per una UX migliore
+      setF24List((prev) =>
+        prev.map((f24) => (f24.idF24 === id ? { ...f24, ...updates } : f24))
+      );
+
+      // Aggiorna su Google Sheets
+      if (updates.stato) {
+        await googleSheetsService.updateF24Status(
+          id,
+          updates.stato,
+          updates.importoPagato
+        );
+        console.log('F24 updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating F24:', error);
+      Alert.alert('Errore', 'Impossibile aggiornare lo stato dell\'F24.');
+      // Ricarica i dati in caso di errore
+      await loadCompanyData();
+    }
+  };
+
+  const filteredF24s = f24List;
+  const filteredDocuments = documentList;
 
   if (loading) {
     return (
       <View style={[commonStyles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Caricamento dati da Google Sheets...</Text>
       </View>
     );
   }
@@ -231,6 +291,13 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {refreshing ? (
+        <View style={styles.refreshingContainer}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.refreshingText}>Aggiornamento...</Text>
+        </View>
+      ) : null}
+
       <ScrollView
         style={styles.content}
         contentContainerStyle={[
@@ -274,6 +341,23 @@ const styles = StyleSheet.create({
   centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
+  refreshingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    backgroundColor: colors.highlight,
+    gap: 8,
+  },
+  refreshingText: {
+    fontSize: 14,
+    color: colors.text,
   },
   header: {
     padding: 16,

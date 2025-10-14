@@ -16,14 +16,16 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockClients, mockCompanies } from '@/data/mockData';
 import { IconSymbol } from '@/components/IconSymbol';
+import { googleSheetsService } from '@/services/googleSheetsService';
+import { useGoogleSheets } from '@/contexts/GoogleSheetsContext';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, setIsFirstAccess } = useAuth();
+  const { isAuthenticated, authenticate } = useGoogleSheets();
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -34,19 +36,55 @@ export default function LoginScreen() {
     setLoading(true);
     console.log('Attempting login for:', username);
 
-    // Simulate API call
-    setTimeout(() => {
-      const user = mockClients.find(
-        (c) => c.nomeUtente === username && c.password === password
-      );
+    try {
+      // Prima verifica se siamo autenticati con Google Sheets
+      if (!isAuthenticated) {
+        Alert.alert(
+          'Connessione Google Sheets',
+          'Per accedere, devi prima connetterti a Google Sheets',
+          [
+            {
+              text: 'Annulla',
+              style: 'cancel',
+              onPress: () => setLoading(false),
+            },
+            {
+              text: 'Connetti',
+              onPress: async () => {
+                const success = await authenticate();
+                if (success) {
+                  // Riprova il login dopo l'autenticazione
+                  await performLogin();
+                } else {
+                  Alert.alert('Errore', 'Impossibile connettersi a Google Sheets');
+                  setLoading(false);
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
 
-      if (user) {
+      await performLogin();
+    } catch (error) {
+      console.error('Login error:', error);
+      Alert.alert('Errore', 'Si è verificato un errore durante il login');
+      setLoading(false);
+    }
+  };
+
+  const performLogin = async () => {
+    try {
+      // Cerca l'utente nel foglio Google Sheets
+      const user = await googleSheetsService.getClientByUsername(username);
+
+      if (user && user.password === password) {
         console.log('Login successful for:', user.nomeCompleto);
         
-        // Check if user has associated companies
-        const hasCompanies = mockCompanies.some(
-          (c) => c.idClienteAssociato === user.idCliente
-        );
+        // Verifica se l'utente ha aziende associate
+        const companies = await googleSheetsService.getCompaniesByClientId(user.idCliente);
+        const hasCompanies = companies.length > 0;
 
         login(user);
         
@@ -62,8 +100,15 @@ export default function LoginScreen() {
         console.log('Login failed - invalid credentials');
         Alert.alert('Errore', 'Nome utente o password non validi');
       }
+    } catch (error) {
+      console.error('Error during login:', error);
+      Alert.alert(
+        'Errore',
+        'Impossibile verificare le credenziali. Controlla la connessione a Google Sheets.'
+      );
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -126,8 +171,19 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-            <View style={styles.demoInfo}>
-              <Text style={styles.demoText}>Demo: username &quot;demo&quot; password &quot;demo&quot;</Text>
+            {!isAuthenticated && (
+              <View style={styles.warningBox}>
+                <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.warning} />
+                <Text style={styles.warningText}>
+                  Non sei connesso a Google Sheets. Clicca su Accedi per connetterti.
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>
+                I dati vengono caricati direttamente da Google Sheets
+              </Text>
             </View>
           </View>
         </ScrollView>
@@ -189,15 +245,31 @@ const styles = StyleSheet.create({
   loginButton: {
     marginTop: 8,
   },
-  demoInfo: {
-    marginTop: 24,
+  warningBox: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: colors.highlight,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+  },
+  infoBox: {
+    marginTop: 16,
     padding: 16,
     backgroundColor: colors.highlight,
     borderRadius: 8,
   },
-  demoText: {
+  infoText: {
     fontSize: 14,
-    color: colors.text,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 });

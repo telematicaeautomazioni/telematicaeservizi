@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useFonts } from 'expo-font';
@@ -14,6 +14,7 @@ import {
 } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { GoogleSheetsProvider } from '@/contexts/GoogleSheetsContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -36,21 +37,24 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <SystemBars style="auto" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-            }}
-          >
-            <Stack.Screen name="login" />
-            <Stack.Screen name="associate-piva" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </AuthProvider>
+      <GoogleSheetsProvider>
+        <AuthProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <SystemBars style="auto" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+              }}
+            >
+              <Stack.Screen name="login" />
+              <Stack.Screen name="associate-piva" />
+              <Stack.Screen name="account-management" />
+              <Stack.Screen name="(tabs)" />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </AuthProvider>
+      </GoogleSheetsProvider>
     </GestureHandlerRootView>
   );
 }
