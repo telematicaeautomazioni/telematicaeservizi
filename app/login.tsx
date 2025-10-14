@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabaseService } from '@/services/supabaseService';
 import { notificationService } from '@/services/notificationService';
 import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -96,27 +96,43 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hasCheckedSession, setHasCheckedSession] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const hasRedirected = useRef(false);
 
-  // Check if user is already logged in (persistent session)
+  // Check if user is already logged in (persistent session) - only once
   useEffect(() => {
     const checkSession = async () => {
-      if (!isLoading && user && !hasCheckedSession) {
+      // Wait for auth context to finish loading
+      if (isLoading) {
+        console.log('Auth context still loading...');
+        return;
+      }
+
+      // If we already redirected, don't do it again
+      if (hasRedirected.current) {
+        console.log('Already redirected, skipping check');
+        return;
+      }
+
+      console.log('Checking session... User:', user ? user.nomeUtente : 'none');
+
+      if (user) {
         console.log('User session found, checking companies...');
-        setHasCheckedSession(true);
+        hasRedirected.current = true;
         await checkUserCompaniesAndRedirect();
-      } else if (!isLoading && !user) {
+      } else {
         console.log('No user session found, showing login screen');
-        setHasCheckedSession(true);
+        setIsCheckingSession(false);
       }
     };
 
     checkSession();
-  }, [isLoading, user, hasCheckedSession]);
+  }, [isLoading, user]);
 
   const checkUserCompaniesAndRedirect = async () => {
     if (!user) {
       console.log('No user found, cannot check companies');
+      setIsCheckingSession(false);
       return;
     }
 
@@ -134,8 +150,10 @@ export default function LoginScreen() {
       }
     } catch (error) {
       console.error('Error checking companies:', error);
-      // If there's an error checking companies, stay on login page
+      // If there's an error checking companies, show login page
       Alert.alert('Errore', 'Si è verificato un errore. Riprova ad accedere.');
+      setIsCheckingSession(false);
+      hasRedirected.current = false;
     }
   };
 
@@ -189,27 +207,13 @@ export default function LoginScreen() {
   };
 
   // Show loading while checking session
-  if (isLoading || !hasCheckedSession) {
+  if (isLoading || isCheckingSession) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ marginTop: 16, color: colors.textSecondary }}>
             Caricamento...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // If user is logged in, don't show the login form (redirect is happening)
-  if (user) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 16, color: colors.textSecondary }}>
-            Reindirizzamento...
           </Text>
         </View>
       </SafeAreaView>
