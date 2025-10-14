@@ -209,7 +209,7 @@ export default function LoginScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              © 2024 Telematica E Servizi{'\n'}
+              Telematica E Servizi{'\n'}
               Tutti i diritti riservati
             </Text>
           </View>
