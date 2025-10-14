@@ -21,7 +21,6 @@ import {
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import React, { useState, useEffect, useCallback } from 'react';
-import * as Notifications from 'expo-notifications';
 
 type TabType = 'f24' | 'documenti';
 
@@ -236,8 +235,9 @@ export default function HomeScreen() {
     );
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
+      // Remove subscriptions using the remove() method on the subscription objects
+      notificationListener.remove();
+      responseListener.remove();
     };
   }, [loadCompanyData]);
 
