@@ -57,8 +57,12 @@ const styles = StyleSheet.create({
   },
   accountButton: {
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: colors.secondary,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   companySelector: {
     flexDirection: 'row',
@@ -311,7 +315,7 @@ export default function HomeScreen() {
             style={styles.accountButton}
             onPress={() => router.push('/account-management')}
           >
-            <IconSymbol name="settings" size={24} color={colors.primary} />
+            <IconSymbol name="person" size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
 

@@ -79,6 +79,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 8,
   },
+  helperText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
   input: {
     backgroundColor: colors.card,
     borderRadius: 8,
@@ -121,10 +127,9 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 10,
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    backgroundColor: '#FF3B30',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.error,
+    marginLeft: 12,
   },
   logoutButton: {
     ...buttonStyles.danger,
@@ -302,7 +307,7 @@ export default function AccountManagementScreen() {
             style={styles.headerLogo}
             resizeMode="contain"
           />
-          <Text style={styles.headerTitle}>Gestione Account</Text>
+          <Text style={styles.headerTitle}>Gestione Profilo</Text>
         </View>
       </View>
 
@@ -312,6 +317,9 @@ export default function AccountManagementScreen() {
           <View style={styles.card}>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Partita IVA o Codice Fiscale</Text>
+              <Text style={styles.helperText}>
+                Inserisci le Partite IVA delle tue aziende, o il tuo codice fiscale, per accedere ai documenti
+              </Text>
               <TextInput
                 style={styles.input}
                 placeholder="Inserisci P.IVA (11 cifre) o CF (16 caratteri)"
@@ -362,7 +370,7 @@ export default function AccountManagementScreen() {
                   style={styles.removeButton}
                   onPress={() => handleRemovePiva(company)}
                 >
-                  <IconSymbol name="close" size={20} color={colors.error} />
+                  <IconSymbol name="close" size={20} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             ))
