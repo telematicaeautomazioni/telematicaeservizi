@@ -96,29 +96,46 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
-  // Check if user is already logged in
+  // Check if user is already logged in (persistent session)
   useEffect(() => {
-    if (!isLoading && user) {
-      console.log('User already logged in, redirecting...');
-      checkUserCompaniesAndRedirect();
-    }
-  }, [isLoading, user]);
+    const checkSession = async () => {
+      if (!isLoading && user && !hasCheckedSession) {
+        console.log('User session found, checking companies...');
+        setHasCheckedSession(true);
+        await checkUserCompaniesAndRedirect();
+      } else if (!isLoading && !user) {
+        console.log('No user session found, showing login screen');
+        setHasCheckedSession(true);
+      }
+    };
+
+    checkSession();
+  }, [isLoading, user, hasCheckedSession]);
 
   const checkUserCompaniesAndRedirect = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, cannot check companies');
+      return;
+    }
 
     try {
+      console.log('Checking companies for user:', user.idCliente);
       const companies = await supabaseService.getCompaniesByClientId(user.idCliente);
       console.log('User has', companies.length, 'associated companies');
 
       if (companies.length === 0) {
+        console.log('No companies found, redirecting to association page');
         router.replace('/associate-piva');
       } else {
+        console.log('Companies found, redirecting to home');
         router.replace('/(tabs)/(home)');
       }
     } catch (error) {
       console.error('Error checking companies:', error);
+      // If there's an error checking companies, stay on login page
+      Alert.alert('Errore', 'Si è verificato un errore. Riprova ad accedere.');
     }
   };
 
@@ -134,7 +151,7 @@ export default function LoginScreen() {
   const performLogin = async () => {
     try {
       setLoading(true);
-      console.log('Attempting login...');
+      console.log('Attempting login for user:', username);
 
       const userData = await supabaseService.login(username, password);
 
@@ -143,7 +160,7 @@ export default function LoginScreen() {
         return;
       }
 
-      console.log('Login successful, user:', userData);
+      console.log('Login successful, user:', userData.nomeUtente);
       await login(userData);
 
       // Register for push notifications
@@ -156,9 +173,11 @@ export default function LoginScreen() {
 
       if (companies.length === 0) {
         // No companies associated, redirect to association screen
+        console.log('No companies, redirecting to association page');
         router.replace('/associate-piva');
       } else {
         // Has companies, go to home
+        console.log('Has companies, redirecting to home');
         router.replace('/(tabs)/(home)');
       }
     } catch (error) {
@@ -170,13 +189,27 @@ export default function LoginScreen() {
   };
 
   // Show loading while checking session
-  if (isLoading) {
+  if (isLoading || !hasCheckedSession) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ marginTop: 16, color: colors.textSecondary }}>
             Caricamento...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // If user is logged in, don't show the login form (redirect is happening)
+  if (user) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: 16, color: colors.textSecondary }}>
+            Reindirizzamento...
           </Text>
         </View>
       </SafeAreaView>
