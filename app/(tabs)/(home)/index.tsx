@@ -44,6 +44,7 @@ const styles = StyleSheet.create({
   headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   headerLogo: {
     width: 40,
@@ -54,6 +55,20 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.secondary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  refreshButton: {
+    padding: 10,
+    borderRadius: 20,
+    backgroundColor: colors.secondary,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   accountButton: {
     padding: 10,
@@ -211,6 +226,7 @@ export default function HomeScreen() {
   const [categories, setCategories] = useState<DocumentCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) {
@@ -268,6 +284,26 @@ export default function HomeScreen() {
       setLoadingData(false);
     }
   }, [selectedCompany]);
+
+  const handleRefresh = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      console.log('Refreshing all data...');
+      
+      // Reload both company list and current company data
+      await loadData();
+      if (selectedCompany) {
+        await loadCompanyData();
+      }
+      
+      Alert.alert('Successo', 'Dati aggiornati correttamente');
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      Alert.alert('Errore', 'Impossibile aggiornare i dati');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadData, loadCompanyData, selectedCompany]);
 
   useEffect(() => {
     loadData();
@@ -457,12 +493,25 @@ export default function HomeScreen() {
             />
             <Text style={styles.headerTitle}>Telematica E Servizi</Text>
           </View>
-          <TouchableOpacity
-            style={styles.accountButton}
-            onPress={() => router.push('/account-management')}
-          >
-            <IconSymbol name="person" size={24} color={colors.primary} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={handleRefresh}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <IconSymbol name="refresh" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.accountButton}
+              onPress={() => router.push('/account-management')}
+            >
+              <IconSymbol name="person" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity
