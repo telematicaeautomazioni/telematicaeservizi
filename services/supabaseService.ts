@@ -1,6 +1,6 @@
 
 import { supabase } from '@/app/integrations/supabase/client';
-import { Client, Company, F24, Document } from '@/types';
+import { Client, Company, F24, Document, DocumentCategory, CompanyUser } from '@/types';
 
 export class SupabaseService {
   private static instance: SupabaseService;
@@ -43,6 +43,7 @@ export class SupabaseService {
         nomeUtente: data.nome_utente,
         password: data.password,
         nomeCompleto: data.nome_completo,
+        tipoUtente: data.tipo_utente || 'decide',
       };
     } catch (error) {
       console.error('Login exception:', error);
@@ -85,28 +86,41 @@ export class SupabaseService {
       // Get the company
       const { data: company, error: companyError } = await supabase
         .from('aziende')
-        .select('id_cliente_associato')
+        .select('id_azienda')
         .eq('partita_iva', piva)
         .single();
 
-      if (companyError || !company || !company.id_cliente_associato) {
-        console.log('No associated client found');
+      if (companyError || !company) {
+        console.log('No company found');
         return [];
       }
 
-      // Get the client's push token
-      const { data: client, error: clientError } = await supabase
+      // Get all users associated with this company
+      const { data: companyUsers, error: usersError } = await supabase
+        .from('aziende_utenti')
+        .select('id_cliente')
+        .eq('id_azienda', company.id_azienda);
+
+      if (usersError || !companyUsers || companyUsers.length === 0) {
+        console.log('No associated users found');
+        return [];
+      }
+
+      // Get push tokens for all associated users
+      const userIds = companyUsers.map(cu => cu.id_cliente);
+      const { data: clients, error: clientsError } = await supabase
         .from('clienti')
         .select('push_token')
-        .eq('id_cliente', company.id_cliente_associato)
-        .single();
+        .in('id_cliente', userIds);
 
-      if (clientError || !client || !client.push_token) {
-        console.log('No push token found');
+      if (clientsError || !clients) {
+        console.log('No push tokens found');
         return [];
       }
 
-      return [client.push_token];
+      return clients
+        .filter(c => c.push_token)
+        .map(c => c.push_token);
     } catch (error) {
       console.error('Error in getPushTokensByPiva:', error);
       return [];
@@ -132,6 +146,7 @@ export class SupabaseService {
         nomeUtente: row.nome_utente,
         password: row.password,
         nomeCompleto: row.nome_completo,
+        tipoUtente: row.tipo_utente || 'decide',
       }));
     } catch (error) {
       console.error('Error in getClients:', error);
@@ -156,6 +171,7 @@ export class SupabaseService {
         nomeUtente: data.nome_utente,
         password: data.password,
         nomeCompleto: data.nome_completo,
+        tipoUtente: data.tipo_utente || 'decide',
       };
     } catch (error) {
       console.error('Error in getClientByUsername:', error);
@@ -191,23 +207,40 @@ export class SupabaseService {
 
   async getCompaniesByClientId(clientId: string): Promise<Company[]> {
     try {
+      // Use the new junction table to get companies
       const { data, error } = await supabase
-        .from('aziende')
-        .select('*')
-        .eq('id_cliente_associato', clientId)
-        .order('denominazione');
+        .from('aziende_utenti')
+        .select(`
+          id_azienda,
+          aziende (
+            id_azienda,
+            partita_iva,
+            denominazione,
+            id_cliente_associato
+          )
+        `)
+        .eq('id_cliente', clientId);
 
       if (error) {
         console.error('Error fetching companies by client:', error);
         throw error;
       }
 
-      return (data || []).map(row => ({
-        idAzienda: row.id_azienda,
-        partitaIva: row.partita_iva,
-        denominazione: row.denominazione,
-        idClienteAssociato: row.id_cliente_associato,
-      }));
+      if (!data) {
+        return [];
+      }
+
+      return data
+        .filter(row => row.aziende)
+        .map(row => {
+          const azienda = Array.isArray(row.aziende) ? row.aziende[0] : row.aziende;
+          return {
+            idAzienda: azienda.id_azienda,
+            partitaIva: azienda.partita_iva,
+            denominazione: azienda.denominazione,
+            idClienteAssociato: azienda.id_cliente_associato,
+          };
+        });
     } catch (error) {
       console.error('Error in getCompaniesByClientId:', error);
       throw error;
@@ -240,21 +273,32 @@ export class SupabaseService {
 
   async associateCompanyToClient(piva: string, clientId: string): Promise<boolean> {
     try {
-      // First check if company exists and is not already associated
+      // First check if company exists
       const company = await this.getCompanyByPiva(piva);
       
       if (!company) {
         throw new Error('Azienda non trovata');
       }
 
-      if (company.idClienteAssociato) {
-        throw new Error('Azienda già associata a un altro cliente');
+      // Check if association already exists
+      const { data: existing, error: checkError } = await supabase
+        .from('aziende_utenti')
+        .select('*')
+        .eq('id_azienda', company.idAzienda)
+        .eq('id_cliente', clientId)
+        .single();
+
+      if (existing) {
+        throw new Error('Azienda già associata a questo utente');
       }
 
+      // Create new association
       const { error } = await supabase
-        .from('aziende')
-        .update({ id_cliente_associato: clientId })
-        .eq('partita_iva', piva);
+        .from('aziende_utenti')
+        .insert({
+          id_azienda: company.idAzienda,
+          id_cliente: clientId,
+        });
 
       if (error) {
         console.error('Error associating company:', error);
@@ -271,11 +315,17 @@ export class SupabaseService {
 
   async removeCompanyAssociation(piva: string, clientId: string): Promise<boolean> {
     try {
+      const company = await this.getCompanyByPiva(piva);
+      
+      if (!company) {
+        throw new Error('Azienda non trovata');
+      }
+
       const { error } = await supabase
-        .from('aziende')
-        .update({ id_cliente_associato: null })
-        .eq('partita_iva', piva)
-        .eq('id_cliente_associato', clientId);
+        .from('aziende_utenti')
+        .delete()
+        .eq('id_azienda', company.idAzienda)
+        .eq('id_cliente', clientId);
 
       if (error) {
         console.error('Error removing company association:', error);
@@ -396,6 +446,7 @@ export class SupabaseService {
         partitaIvaAzienda: row.partita_iva_azienda,
         descrizione: row.descrizione,
         linkPdf: row.link_pdf,
+        categoriaId: row.categoria_id,
       }));
     } catch (error) {
       console.error('Error in getDocuments:', error);
@@ -421,9 +472,63 @@ export class SupabaseService {
         partitaIvaAzienda: row.partita_iva_azienda,
         descrizione: row.descrizione,
         linkPdf: row.link_pdf,
+        categoriaId: row.categoria_id,
       }));
     } catch (error) {
       console.error('Error in getDocumentsByPiva:', error);
+      throw error;
+    }
+  }
+
+  async getDocumentsByCategory(piva: string, categoryId: string): Promise<Document[]> {
+    try {
+      const { data, error } = await supabase
+        .from('documenti')
+        .select('*')
+        .eq('partita_iva_azienda', piva)
+        .eq('categoria_id', categoryId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching documents by category:', error);
+        throw error;
+      }
+
+      return (data || []).map(row => ({
+        idDocumento: row.id_documento,
+        partitaIvaAzienda: row.partita_iva_azienda,
+        descrizione: row.descrizione,
+        linkPdf: row.link_pdf,
+        categoriaId: row.categoria_id,
+      }));
+    } catch (error) {
+      console.error('Error in getDocumentsByCategory:', error);
+      throw error;
+    }
+  }
+
+  // ===== CATEGORIE DOCUMENTI =====
+
+  async getDocumentCategories(): Promise<DocumentCategory[]> {
+    try {
+      const { data, error } = await supabase
+        .from('categorie_documenti')
+        .select('*')
+        .order('ordine');
+
+      if (error) {
+        console.error('Error fetching document categories:', error);
+        throw error;
+      }
+
+      return (data || []).map(row => ({
+        idCategoria: row.id_categoria,
+        nome: row.nome,
+        descrizione: row.descrizione,
+        ordine: row.ordine,
+      }));
+    } catch (error) {
+      console.error('Error in getDocumentCategories:', error);
       throw error;
     }
   }

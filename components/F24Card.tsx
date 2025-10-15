@@ -15,6 +15,7 @@ import { colors, buttonStyles } from '@/styles/commonStyles';
 import { F24 } from '@/types';
 import { IconSymbol } from '@/components/IconSymbol';
 import { router } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface F24CardProps {
   f24: F24;
@@ -22,6 +23,7 @@ interface F24CardProps {
 }
 
 export default function F24Card({ f24, onUpdate }: F24CardProps) {
+  const { canMakeDecisions } = useAuth();
   const [showPartialModal, setShowPartialModal] = useState(false);
   const [partialAmount, setPartialAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -125,6 +127,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
   };
 
   const showChangeOfMindButton = f24.stato === 'Confermato' || f24.stato === 'Rifiutato';
+  const showDecisionButtons = canMakeDecisions() && f24.stato === 'In attesa di risposta';
 
   return (
     <>
@@ -149,7 +152,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
           <Text style={styles.pdfButtonText}>Apri PDF</Text>
         </TouchableOpacity>
 
-        {f24.stato === 'In attesa di risposta' && (
+        {showDecisionButtons && (
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.actionButton, styles.acceptButton]}
@@ -186,7 +189,16 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
           </View>
         )}
 
-        {showChangeOfMindButton && (
+        {!canMakeDecisions() && f24.stato === 'In attesa di risposta' && (
+          <View style={styles.viewOnlyNotice}>
+            <IconSymbol name="eye.fill" size={18} color={colors.textSecondary} />
+            <Text style={styles.viewOnlyText}>
+              Solo visualizzazione - In attesa di decisione
+            </Text>
+          </View>
+        )}
+
+        {showChangeOfMindButton && canMakeDecisions() && (
           <TouchableOpacity
             style={styles.changeOfMindButton}
             onPress={handleChangeOfMind}
@@ -333,6 +345,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.card,
+  },
+  viewOnlyNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+  },
+  viewOnlyText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
   changeOfMindButton: {
     flexDirection: 'row',

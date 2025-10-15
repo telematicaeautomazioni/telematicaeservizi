@@ -4,6 +4,7 @@ export interface Client {
   nomeUtente: string;
   password: string;
   nomeCompleto: string;
+  tipoUtente: 'visualizza' | 'decide';
 }
 
 export interface Company {
@@ -28,4 +29,19 @@ export interface Document {
   partitaIvaAzienda: string;
   descrizione: string;
   linkPdf: string;
+  categoriaId?: string;
+}
+
+export interface DocumentCategory {
+  idCategoria: string;
+  nome: string;
+  descrizione?: string;
+  ordine: number;
+}
+
+export interface CompanyUser {
+  id: string;
+  idAzienda: string;
+  idCliente: string;
+  createdAt: string;
 }

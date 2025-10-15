@@ -3,7 +3,7 @@ import { Stack, router } from 'expo-router';
 import DocumentItem from '@/components/DocumentItem';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, commonStyles } from '@/styles/commonStyles';
-import { Company, F24, Document } from '@/types';
+import { Company, F24, Document, DocumentCategory } from '@/types';
 import F24Card from '@/components/F24Card';
 import { IconSymbol } from '@/components/IconSymbol';
 import { supabaseService } from '@/services/supabaseService';
@@ -79,6 +79,22 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginLeft: 8,
   },
+  userTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.highlight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  userTypeBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+    marginLeft: 4,
+  },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.card,
@@ -109,6 +125,29 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+  },
+  categorySection: {
+    marginBottom: 24,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  categoryTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginLeft: 8,
+  },
+  categoryDescription: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginLeft: 8,
+    fontStyle: 'italic',
   },
   loadingContainer: {
     flex: 1,
@@ -148,12 +187,13 @@ const styles = StyleSheet.create({
 });
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, canMakeDecisions } = useAuth();
   const [selectedTab, setSelectedTab] = useState<TabType>('f24');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [f24List, setF24List] = useState<F24[]>([]);
   const [documentList, setDocumentList] = useState<Document[]>([]);
+  const [categories, setCategories] = useState<DocumentCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
 
@@ -167,10 +207,16 @@ export default function HomeScreen() {
       setLoading(true);
       console.log('Loading companies for user:', user.idCliente);
       
-      const userCompanies = await supabaseService.getCompaniesByClientId(user.idCliente);
+      const [userCompanies, documentCategories] = await Promise.all([
+        supabaseService.getCompaniesByClientId(user.idCliente),
+        supabaseService.getDocumentCategories(),
+      ]);
+      
       console.log('Loaded companies:', userCompanies.length);
+      console.log('Loaded categories:', documentCategories.length);
       
       setCompanies(userCompanies);
+      setCategories(documentCategories);
       
       if (userCompanies.length > 0) {
         setSelectedCompany(userCompanies[0]);
@@ -265,6 +311,80 @@ export default function HomeScreen() {
     }
   };
 
+  const renderDocumentsByCategory = () => {
+    if (documentList.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <IconSymbol name="folder" size={64} color={colors.textSecondary} />
+          <Text style={styles.emptyStateText}>
+            Nessun documento disponibile per questa azienda
+          </Text>
+        </View>
+      );
+    }
+
+    // Group documents by category
+    const documentsByCategory: { [key: string]: Document[] } = {};
+    const uncategorizedDocs: Document[] = [];
+
+    documentList.forEach(doc => {
+      if (doc.categoriaId) {
+        if (!documentsByCategory[doc.categoriaId]) {
+          documentsByCategory[doc.categoriaId] = [];
+        }
+        documentsByCategory[doc.categoriaId].push(doc);
+      } else {
+        uncategorizedDocs.push(doc);
+      }
+    });
+
+    return (
+      <>
+        {categories.map(category => {
+          const docs = documentsByCategory[category.idCategoria] || [];
+          if (docs.length === 0) return null;
+
+          return (
+            <View key={category.idCategoria} style={styles.categorySection}>
+              <View style={styles.categoryHeader}>
+                <IconSymbol name="folder.fill" size={24} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.categoryTitle}>{category.nome}</Text>
+                  {category.descrizione && (
+                    <Text style={styles.categoryDescription}>{category.descrizione}</Text>
+                  )}
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.primary }}>
+                  {docs.length}
+                </Text>
+              </View>
+              {docs.map(doc => (
+                <DocumentItem key={doc.idDocumento} document={doc} />
+              ))}
+            </View>
+          );
+        })}
+
+        {uncategorizedDocs.length > 0 && (
+          <View style={styles.categorySection}>
+            <View style={styles.categoryHeader}>
+              <IconSymbol name="doc.fill" size={24} color={colors.textSecondary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.categoryTitle}>Senza Categoria</Text>
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.textSecondary }}>
+                {uncategorizedDocs.length}
+              </Text>
+            </View>
+            {uncategorizedDocs.map(doc => (
+              <DocumentItem key={doc.idDocumento} document={doc} />
+            ))}
+          </View>
+        )}
+      </>
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -339,6 +459,19 @@ export default function HomeScreen() {
           </Text>
           <IconSymbol name="chevron-down" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
+
+        {user && (
+          <View style={styles.userTypeBadge}>
+            <IconSymbol 
+              name={canMakeDecisions() ? "pencil" : "eye.fill"} 
+              size={14} 
+              color={colors.primary} 
+            />
+            <Text style={styles.userTypeBadgeText}>
+              {canMakeDecisions() ? 'Utente Decisionale' : 'Utente Visualizzazione'}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.tabBar}>
@@ -381,18 +514,7 @@ export default function HomeScreen() {
               ))
             )
           ) : (
-            documentList.length === 0 ? (
-              <View style={styles.emptyState}>
-                <IconSymbol name="folder" size={64} color={colors.textSecondary} />
-                <Text style={styles.emptyStateText}>
-                  Nessun documento disponibile per questa azienda
-                </Text>
-              </View>
-            ) : (
-              documentList.map((doc) => (
-                <DocumentItem key={doc.idDocumento} document={doc} />
-              ))
-            )
+            renderDocumentsByCategory()
           )}
         </ScrollView>
       )}

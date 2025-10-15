@@ -8,6 +8,7 @@ interface AuthContextType {
   logout: () => void;
   isFirstAccess: boolean;
   setIsFirstAccess: (value: boolean) => void;
+  canMakeDecisions: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,7 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isFirstAccess, setIsFirstAccess] = useState(false);
 
   const login = (userData: Client) => {
-    console.log('User logged in:', userData.nomeUtente);
+    console.log('User logged in:', userData.nomeUtente, 'Type:', userData.tipoUtente);
     setUser(userData);
   };
 
@@ -27,8 +28,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsFirstAccess(false);
   };
 
+  const canMakeDecisions = () => {
+    return user?.tipoUtente === 'decide';
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isFirstAccess, setIsFirstAccess }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      logout, 
+      isFirstAccess, 
+      setIsFirstAccess,
+      canMakeDecisions 
+    }}>
       {children}
     </AuthContext.Provider>
   );
