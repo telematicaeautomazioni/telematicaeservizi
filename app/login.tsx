@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabaseService } from '@/services/supabaseService';
 import { notificationService } from '@/services/notificationService';
 import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -92,10 +92,18 @@ const styles = StyleSheet.create({
 });
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // If user is already logged in, redirect
+  useEffect(() => {
+    if (user) {
+      console.log('User already logged in, redirecting...');
+      router.replace('/(tabs)/(home)');
+    }
+  }, [user]);
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -115,7 +123,9 @@ export default function LoginScreen() {
       }
 
       console.log('Login successful, user:', userData.nomeUtente);
-      login(userData);
+      
+      // Store the session and update context
+      await login(userData);
 
       // Register for push notifications
       console.log('Registering for push notifications...');

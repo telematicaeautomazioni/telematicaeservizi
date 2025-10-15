@@ -1,10 +1,12 @@
 
-import { Company } from '@/types';
-import { supabaseService } from '@/services/supabaseService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { supabaseService } from '@/services/supabaseService';
 import { colors, commonStyles, buttonStyles } from '@/styles/commonStyles';
+import { IconSymbol } from '@/components/IconSymbol';
+import { Stack, router } from 'expo-router';
 import {
   View,
   Text,
@@ -16,110 +18,96 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import React, { useState, useEffect, useCallback } from 'react';
-import { IconSymbol } from '@/components/IconSymbol';
-import { useAuth } from '@/contexts/AuthContext';
+import { Company } from '@/types';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
+  scrollContent: {
+    padding: 20,
+  },
   header: {
-    padding: 16,
-    backgroundColor: colors.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.primaryDark,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: colors.secondary,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 24,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: colors.secondary,
+    color: colors.text,
+    marginBottom: 8,
   },
-  placeholder: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
+  headerSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text,
+    marginBottom: 16,
+  },
+  card: {
+    ...commonStyles.card,
+    padding: 16,
     marginBottom: 12,
   },
-  userInfoCard: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-    elevation: 2,
-  },
-  userInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  userInfo: {
     marginBottom: 8,
   },
   userInfoLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
+    marginBottom: 4,
   },
   userInfoValue: {
     fontSize: 16,
     color: colors.text,
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  userTypeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.highlight,
+  badge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 12,
     alignSelf: 'flex-start',
+    marginTop: 8,
   },
-  userTypeBadgeText: {
-    fontSize: 13,
+  badgeDecide: {
+    backgroundColor: colors.primary + '20',
+  },
+  badgeVisualizza: {
+    backgroundColor: colors.textSecondary + '20',
+  },
+  badgeText: {
+    fontSize: 12,
     fontWeight: '600',
+  },
+  badgeTextDecide: {
     color: colors.primary,
-    marginLeft: 6,
+  },
+  badgeTextVisualizza: {
+    color: colors.textSecondary,
   },
   inputContainer: {
     marginBottom: 16,
   },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
   input: {
     backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 12,
     fontSize: 16,
     color: colors.text,
-    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   addButton: {
     ...buttonStyles.primary,
@@ -127,23 +115,16 @@ const styles = StyleSheet.create({
   addButtonText: {
     ...buttonStyles.primaryText,
   },
-  companiesList: {
-    marginTop: 8,
-  },
   companyCard: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
+    ...commonStyles.card,
     padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-    elevation: 2,
+    alignItems: 'center',
   },
   companyInfo: {
     flex: 1,
-    marginRight: 12,
   },
   companyName: {
     fontSize: 16,
@@ -157,52 +138,30 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 8,
-    borderRadius: 20,
-    backgroundColor: colors.error + '20',
-  },
-  logoutButton: {
-    ...buttonStyles.secondary,
-    backgroundColor: colors.error,
-    marginTop: 24,
-  },
-  logoutButtonText: {
-    ...buttonStyles.secondaryText,
-    color: colors.card,
   },
   emptyState: {
+    padding: 32,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
   },
   emptyStateText: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 12,
     textAlign: 'center',
   },
-  loadingContainer: {
-    padding: 24,
-    alignItems: 'center',
+  logoutButton: {
+    ...buttonStyles.secondary,
+    marginTop: 16,
   },
-  infoBox: {
-    backgroundColor: colors.highlight,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  infoText: {
-    fontSize: 13,
-    color: colors.text,
-    lineHeight: 18,
+  logoutButtonText: {
+    ...buttonStyles.secondaryText,
+    color: colors.error,
   },
 });
 
 export default function AccountManagementScreen() {
-  const { user, logout, canMakeDecisions } = useAuth();
+  const { user, logout } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [pivaInput, setPivaInput] = useState('');
+  const [newPiva, setNewPiva] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingCompanies, setLoadingCompanies] = useState(true);
 
@@ -212,10 +171,8 @@ export default function AccountManagementScreen() {
     try {
       setLoadingCompanies(true);
       console.log('Loading companies for user:', user.idCliente);
-      
       const userCompanies = await supabaseService.getCompaniesByClientId(user.idCliente);
-      console.log('Loaded companies:', userCompanies.length);
-      
+      console.log('Loaded', userCompanies.length, 'companies');
       setCompanies(userCompanies);
     } catch (error) {
       console.error('Error loading companies:', error);
@@ -230,40 +187,34 @@ export default function AccountManagementScreen() {
   }, [loadUserCompanies]);
 
   const validatePiva = (piva: string): boolean => {
-    // Remove spaces and convert to uppercase
-    const cleanPiva = piva.replace(/\s/g, '').toUpperCase();
-    
-    // Check if it's a valid P.IVA (11 digits) or Codice Fiscale (16 alphanumeric)
-    const pivaRegex = /^\d{11}$/;
-    const cfRegex = /^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/;
-    
-    return pivaRegex.test(cleanPiva) || cfRegex.test(cleanPiva);
+    const cleaned = piva.replace(/\s/g, '');
+    return /^\d{11}$/.test(cleaned);
   };
 
   const handleAddPiva = async () => {
     if (!user) return;
 
-    const cleanPiva = pivaInput.replace(/\s/g, '').toUpperCase();
-    
-    if (!validatePiva(cleanPiva)) {
-      Alert.alert('Errore', 'Inserisci una P.IVA o Codice Fiscale valido');
+    const cleanedPiva = newPiva.replace(/\s/g, '');
+
+    if (!validatePiva(cleanedPiva)) {
+      Alert.alert('Errore', 'Inserisci una P.IVA valida (11 cifre)');
       return;
     }
 
     try {
       setLoading(true);
-      console.log('Associating P.IVA/CF:', cleanPiva);
+      console.log('Adding P.IVA:', cleanedPiva);
       
-      await supabaseService.associateCompanyToClient(cleanPiva, user.idCliente);
+      await supabaseService.associateCompanyToClient(cleanedPiva, user.idCliente);
       
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Successo', 'Azienda associata correttamente');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Successo', 'Azienda associata con successo');
       
-      setPivaInput('');
+      setNewPiva('');
       await loadUserCompanies();
     } catch (error: any) {
-      console.error('Error associating company:', error);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      console.error('Error adding P.IVA:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Errore', error.message || 'Impossibile associare l\'azienda');
     } finally {
       setLoading(false);
@@ -274,8 +225,8 @@ export default function AccountManagementScreen() {
     if (!user) return;
 
     Alert.alert(
-      'Conferma Rimozione',
-      `Sei sicuro di voler rimuovere l'associazione con ${company.denominazione}?`,
+      'Conferma',
+      `Vuoi rimuovere l'associazione con ${company.denominazione}?`,
       [
         { text: 'Annulla', style: 'cancel' },
         {
@@ -283,21 +234,17 @@ export default function AccountManagementScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              setLoading(true);
-              console.log('Removing company association:', company.partitaIva);
-              
+              console.log('Removing P.IVA:', company.partitaIva);
               await supabaseService.removeCompanyAssociation(company.partitaIva, user.idCliente);
               
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert('Successo', 'Associazione rimossa correttamente');
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Successo', 'Associazione rimossa');
               
               await loadUserCompanies();
             } catch (error) {
-              console.error('Error removing company:', error);
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              console.error('Error removing P.IVA:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               Alert.alert('Errore', 'Impossibile rimuovere l\'associazione');
-            } finally {
-              setLoading(false);
             }
           },
         },
@@ -305,19 +252,25 @@ export default function AccountManagementScreen() {
     );
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
-      'Conferma Logout',
-      'Sei sicuro di voler uscire?',
+      'Conferma',
+      'Vuoi disconnetterti?',
       [
         { text: 'Annulla', style: 'cancel' },
         {
-          text: 'Esci',
+          text: 'Disconnetti',
           style: 'destructive',
-          onPress: () => {
-            console.log('User logging out');
-            logout();
-            router.replace('/login');
+          onPress: async () => {
+            try {
+              console.log('Logging out...');
+              await logout();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              router.replace('/login');
+            } catch (error) {
+              console.error('Error logging out:', error);
+              Alert.alert('Errore', 'Impossibile disconnettersi');
+            }
           },
         },
       ]
@@ -327,8 +280,14 @@ export default function AccountManagementScreen() {
   if (!user) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.loadingContainer}>
+        <Stack.Screen
+          options={{
+            title: 'Gestione Account',
+            headerShown: true,
+            headerBackTitle: 'Indietro',
+          }}
+        />
+        <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>Utente non trovato</Text>
         </View>
       </SafeAreaView>
@@ -337,89 +296,77 @@ export default function AccountManagementScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Stack.Screen options={{ headerShown: false }} />
-      
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <IconSymbol name="arrow.left" size={20} color={colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Gestione Account</Text>
-          <View style={styles.placeholder} />
+      <Stack.Screen
+        options={{
+          title: 'Gestione Account',
+          headerShown: true,
+          headerBackTitle: 'Indietro',
+        }}
+      />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Il Tuo Account</Text>
+          <Text style={styles.headerSubtitle}>
+            Gestisci le tue informazioni e le aziende associate
+          </Text>
         </View>
-      </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Informazioni Utente</Text>
-          
-          <View style={styles.userInfoCard}>
-            <View style={styles.userInfoRow}>
+          <View style={styles.card}>
+            <View style={styles.userInfo}>
               <Text style={styles.userInfoLabel}>Nome Completo</Text>
               <Text style={styles.userInfoValue}>{user.nomeCompleto}</Text>
             </View>
-            
-            <View style={styles.userInfoRow}>
+            <View style={styles.userInfo}>
               <Text style={styles.userInfoLabel}>Nome Utente</Text>
               <Text style={styles.userInfoValue}>{user.nomeUtente}</Text>
             </View>
-            
-            <View style={[styles.userInfoRow, { marginBottom: 0 }]}>
-              <Text style={styles.userInfoLabel}>Tipo Utente</Text>
-              <View style={styles.userTypeBadge}>
-                <IconSymbol 
-                  name={canMakeDecisions() ? "pencil" : "eye.fill"} 
-                  size={14} 
-                  color={colors.primary} 
-                />
-                <Text style={styles.userTypeBadgeText}>
-                  {canMakeDecisions() ? 'Decisionale' : 'Visualizzazione'}
-                </Text>
-              </View>
+            <View
+              style={[
+                styles.badge,
+                user.tipoUtente === 'decide' ? styles.badgeDecide : styles.badgeVisualizza,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  user.tipoUtente === 'decide'
+                    ? styles.badgeTextDecide
+                    : styles.badgeTextVisualizza,
+                ]}
+              >
+                {user.tipoUtente === 'decide' ? 'Utente Decisionale' : 'Utente Visualizzazione'}
+              </Text>
             </View>
           </View>
-
-          {canMakeDecisions() ? (
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                ℹ️ Come utente decisionale, puoi associare una P.IVA solo se non è già associata a un altro utente decisionale. Una P.IVA può avere un solo utente decisionale, ma infiniti utenti di visualizzazione.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                ℹ️ Come utente di visualizzazione, puoi associarti a qualsiasi P.IVA senza limiti. Puoi vedere tutti i documenti e gli F24, ma non puoi prendere decisioni (accettare, rifiutare o pagare parzialmente).
-              </Text>
-            </View>
-          )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Associa Azienda</Text>
-          
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Inserisci P.IVA o Codice Fiscale"
-              placeholderTextColor={colors.textSecondary}
-              value={pivaInput}
-              onChangeText={setPivaInput}
-              autoCapitalize="characters"
-              editable={!loading}
-            />
-            
+          <Text style={styles.sectionTitle}>Aggiungi Azienda</Text>
+          <View style={styles.card}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Partita IVA</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Inserisci P.IVA (11 cifre)"
+                placeholderTextColor={colors.textSecondary}
+                value={newPiva}
+                onChangeText={setNewPiva}
+                keyboardType="numeric"
+                maxLength={11}
+                editable={!loading}
+              />
+            </View>
             <TouchableOpacity
               style={styles.addButton}
               onPress={handleAddPiva}
-              disabled={loading || !pivaInput.trim()}
+              disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color={colors.secondary} />
               ) : (
-                <Text style={styles.addButtonText}>Associa</Text>
+                <Text style={styles.addButtonText}>Associa Azienda</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -427,44 +374,37 @@ export default function AccountManagementScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Aziende Associate</Text>
-          
           {loadingCompanies ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
+            <View style={styles.card}>
+              <ActivityIndicator color={colors.primary} />
             </View>
           ) : companies.length === 0 ? (
             <View style={styles.emptyState}>
-              <IconSymbol name="business" size={48} color={colors.textSecondary} />
               <Text style={styles.emptyStateText}>
-                Nessuna azienda associata.{'\n'}Inserisci una P.IVA o Codice Fiscale per iniziare.
+                Nessuna azienda associata.{'\n'}
+                Aggiungi una P.IVA per iniziare.
               </Text>
             </View>
           ) : (
-            <View style={styles.companiesList}>
-              {companies.map((company) => (
-                <View key={company.idAzienda} style={styles.companyCard}>
-                  <View style={styles.companyInfo}>
-                    <Text style={styles.companyName}>{company.denominazione}</Text>
-                    <Text style={styles.companyPiva}>P.IVA: {company.partitaIva}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => handleRemovePiva(company)}
-                    disabled={loading}
-                  >
-                    <IconSymbol name="xmark" size={20} color={colors.error} />
-                  </TouchableOpacity>
+            companies.map((company) => (
+              <View key={company.idAzienda} style={styles.companyCard}>
+                <View style={styles.companyInfo}>
+                  <Text style={styles.companyName}>{company.denominazione}</Text>
+                  <Text style={styles.companyPiva}>P.IVA: {company.partitaIva}</Text>
                 </View>
-              ))}
-            </View>
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => handleRemovePiva(company)}
+                >
+                  <IconSymbol name="trash" size={20} color={colors.error} />
+                </TouchableOpacity>
+              </View>
+            ))
           )}
         </View>
 
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutButtonText}>Esci</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Disconnetti</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
