@@ -130,6 +130,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  infoBox: {
+    backgroundColor: colors.highlight,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  infoText: {
+    fontSize: 13,
+    color: colors.text,
+    lineHeight: 18,
+  },
 });
 
 export default function AssociatePivaScreen() {
@@ -185,29 +198,15 @@ export default function AssociatePivaScreen() {
       setLoading(true);
       console.log('Associating P.IVA/CF:', cleanPiva);
 
-      // Check if company exists
-      const company = await supabaseService.getCompanyByPiva(cleanPiva);
-
-      if (!company) {
-        Alert.alert('Errore', 'Azienda non trovata con questa Partita IVA o Codice Fiscale');
-        return;
-      }
-
-      // Check if already associated
-      if (company.idClienteAssociato) {
-        Alert.alert('Errore', 'Questa Partita IVA o Codice Fiscale è già associato a un altro account');
-        return;
-      }
-
-      // Associate company with user
+      // The service will handle all the validation logic
       await supabaseService.associateCompanyToClient(cleanPiva, user!.idCliente);
 
       Alert.alert('Successo', 'Partita IVA o Codice Fiscale associato correttamente');
       setPiva('');
       await loadAssociatedCompanies();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error associating P.IVA/CF:', error);
-      Alert.alert('Errore', 'Impossibile associare la Partita IVA o il Codice Fiscale');
+      Alert.alert('Errore', error.message || 'Impossibile associare la Partita IVA o il Codice Fiscale');
     } finally {
       setLoading(false);
     }
@@ -247,6 +246,22 @@ export default function AssociatePivaScreen() {
             Inserisci le Partite IVA delle tue aziende, o il tuo codice fiscale, per accedere ai documenti
           </Text>
         </View>
+
+        {user && user.tipoUtente === 'decide' && (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              ℹ️ Come utente decisionale, puoi associare una P.IVA solo se non è già associata a un altro utente decisionale. Gli utenti di visualizzazione possono associarsi senza limiti.
+            </Text>
+          </View>
+        )}
+
+        {user && user.tipoUtente === 'visualizza' && (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              ℹ️ Come utente di visualizzazione, puoi associarti a qualsiasi P.IVA senza limiti. Potrai vedere tutti i documenti e gli F24, ma non potrai prendere decisioni.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.card}>
           <View style={styles.inputContainer}>

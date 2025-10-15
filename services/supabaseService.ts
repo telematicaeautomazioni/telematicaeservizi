@@ -179,6 +179,31 @@ export class SupabaseService {
     }
   }
 
+  async getClientById(clientId: string): Promise<Client | null> {
+    try {
+      const { data, error } = await supabase
+        .from('clienti')
+        .select('*')
+        .eq('id_cliente', clientId)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return {
+        idCliente: data.id_cliente,
+        nomeUtente: data.nome_utente,
+        password: data.password,
+        nomeCompleto: data.nome_completo,
+        tipoUtente: data.tipo_utente || 'decide',
+      };
+    } catch (error) {
+      console.error('Error in getClientById:', error);
+      return null;
+    }
+  }
+
   // ===== AZIENDE =====
 
   async getCompanies(): Promise<Company[]> {
@@ -273,6 +298,8 @@ export class SupabaseService {
 
   async associateCompanyToClient(piva: string, clientId: string): Promise<boolean> {
     try {
+      console.log('Associating P.IVA:', piva, 'to client:', clientId);
+      
       // First check if company exists
       const company = await this.getCompanyByPiva(piva);
       
@@ -280,19 +307,70 @@ export class SupabaseService {
         throw new Error('Azienda non trovata');
       }
 
-      // Check if association already exists
-      const { data: existing, error: checkError } = await supabase
+      // Get the current user's type
+      const currentUser = await this.getClientById(clientId);
+      
+      if (!currentUser) {
+        throw new Error('Utente non trovato');
+      }
+
+      console.log('Current user type:', currentUser.tipoUtente);
+
+      // Check if this user is already associated with this company
+      const { data: existingAssociation, error: checkError } = await supabase
         .from('aziende_utenti')
         .select('*')
         .eq('id_azienda', company.idAzienda)
         .eq('id_cliente', clientId)
-        .single();
+        .maybeSingle();
 
-      if (existing) {
+      if (existingAssociation) {
         throw new Error('Azienda già associata a questo utente');
       }
 
-      // Create new association
+      // If the current user is a "decide" user, check if there's already a "decide" user associated
+      if (currentUser.tipoUtente === 'decide') {
+        console.log('Checking for existing "decide" users...');
+        
+        // Get all users associated with this company
+        const { data: companyUsers, error: usersError } = await supabase
+          .from('aziende_utenti')
+          .select('id_cliente')
+          .eq('id_azienda', company.idAzienda);
+
+        if (usersError) {
+          console.error('Error checking existing users:', usersError);
+          throw usersError;
+        }
+
+        if (companyUsers && companyUsers.length > 0) {
+          // Get the user types for all associated users
+          const userIds = companyUsers.map(cu => cu.id_cliente);
+          const { data: users, error: clientsError } = await supabase
+            .from('clienti')
+            .select('id_cliente, tipo_utente')
+            .in('id_cliente', userIds);
+
+          if (clientsError) {
+            console.error('Error fetching user types:', clientsError);
+            throw clientsError;
+          }
+
+          // Check if any of them is a "decide" user
+          const hasDecideUser = users?.some(u => u.tipo_utente === 'decide');
+          
+          if (hasDecideUser) {
+            console.log('Company already has a "decide" user');
+            throw new Error('Questa P.IVA è già associata a un utente decisionale. Una P.IVA può avere solo un utente decisionale, ma infiniti utenti di visualizzazione.');
+          }
+        }
+      }
+
+      // If we get here, the association is allowed
+      // For "visualizza" users: always allowed
+      // For "decide" users: only if no other "decide" user exists
+      console.log('Creating association...');
+      
       const { error } = await supabase
         .from('aziende_utenti')
         .insert({

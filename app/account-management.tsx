@@ -382,11 +382,16 @@ export default function AccountManagementScreen() {
             </View>
           </View>
 
-          {!canMakeDecisions() && (
+          {canMakeDecisions() ? (
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
-                ℹ️ Come utente di visualizzazione, puoi vedere tutti i documenti e gli F24, 
-                ma non puoi prendere decisioni (accettare, rifiutare o pagare parzialmente).
+                ℹ️ Come utente decisionale, puoi associare una P.IVA solo se non è già associata a un altro utente decisionale. Una P.IVA può avere un solo utente decisionale, ma infiniti utenti di visualizzazione.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>
+                ℹ️ Come utente di visualizzazione, puoi associarti a qualsiasi P.IVA senza limiti. Puoi vedere tutti i documenti e gli F24, ma non puoi prendere decisioni (accettare, rifiutare o pagare parzialmente).
               </Text>
             </View>
           )}
