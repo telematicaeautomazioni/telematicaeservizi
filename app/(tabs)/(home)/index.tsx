@@ -149,6 +149,21 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontStyle: 'italic',
   },
+  categoryEmptyState: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  categoryEmptyText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -312,12 +327,13 @@ export default function HomeScreen() {
   };
 
   const renderDocumentsByCategory = () => {
-    if (documentList.length === 0) {
+    // If no categories exist at all, show a message
+    if (categories.length === 0) {
       return (
         <View style={styles.emptyState}>
           <IconSymbol name="folder" size={64} color={colors.textSecondary} />
           <Text style={styles.emptyStateText}>
-            Nessun documento disponibile per questa azienda
+            Nessuna categoria documentale disponibile
           </Text>
         </View>
       );
@@ -340,9 +356,9 @@ export default function HomeScreen() {
 
     return (
       <>
+        {/* Render all categories, even if empty */}
         {categories.map(category => {
           const docs = documentsByCategory[category.idCategoria] || [];
-          if (docs.length === 0) return null;
 
           return (
             <View key={category.idCategoria} style={styles.categorySection}>
@@ -358,13 +374,23 @@ export default function HomeScreen() {
                   {docs.length}
                 </Text>
               </View>
-              {docs.map(doc => (
-                <DocumentItem key={doc.idDocumento} document={doc} />
-              ))}
+              
+              {docs.length === 0 ? (
+                <View style={styles.categoryEmptyState}>
+                  <Text style={styles.categoryEmptyText}>
+                    Nessun documento per questa categoria.
+                  </Text>
+                </View>
+              ) : (
+                docs.map(doc => (
+                  <DocumentItem key={doc.idDocumento} document={doc} />
+                ))
+              )}
             </View>
           );
         })}
 
+        {/* Render uncategorized documents if any */}
         {uncategorizedDocs.length > 0 && (
           <View style={styles.categorySection}>
             <View style={styles.categoryHeader}>
