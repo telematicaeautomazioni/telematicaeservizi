@@ -481,11 +481,49 @@ export class SupabaseService {
     importoPagato?: number
   ): Promise<boolean> {
     try {
-      const updateData: any = { stato };
+      console.log('Updating F24 status:', { f24Id, stato, importoPagato });
+      
+      // Get the F24 to check the full amount
+      const { data: f24Data, error: fetchError } = await supabase
+        .from('scadenze_f24')
+        .select('importo')
+        .eq('id_f24', f24Id)
+        .single();
+
+      if (fetchError || !f24Data) {
+        console.error('Error fetching F24 for update:', fetchError);
+        throw fetchError || new Error('F24 not found');
+      }
+
+      const fullAmount = parseFloat(f24Data.importo);
+      console.log('Full amount:', fullAmount);
+
+      // Determine the correct stato value
+      let finalStato = stato;
+      
+      // If the stato is being set to 'Confermato', check if it's a full payment
+      if (stato === 'Confermato') {
+        // If no importoPagato is provided, it means full payment
+        if (importoPagato === undefined) {
+          finalStato = 'intero';
+          console.log('Full payment confirmed, setting stato to "intero"');
+        } else if (importoPagato >= fullAmount) {
+          // If importoPagato equals or exceeds the full amount, it's also a full payment
+          finalStato = 'intero';
+          console.log('Payment amount equals or exceeds full amount, setting stato to "intero"');
+        } else {
+          // Partial payment, keep as 'Confermato'
+          console.log('Partial payment, keeping stato as "Confermato"');
+        }
+      }
+
+      const updateData: any = { stato: finalStato };
       
       if (importoPagato !== undefined) {
         updateData.importo_pagato = importoPagato;
       }
+
+      console.log('Update data:', updateData);
 
       const { error } = await supabase
         .from('scadenze_f24')

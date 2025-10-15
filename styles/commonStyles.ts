@@ -18,6 +18,8 @@ export const colors = {
   successLight: '#dcfce7',
   warning: '#f59e0b',
   warningLight: '#fef3c7',
+  info: '#3b82f6',
+  infoLight: '#dbeafe',
   highlight: '#E8F4F5',
   surface: '#ffffff',
 };

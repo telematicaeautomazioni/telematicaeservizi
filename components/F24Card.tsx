@@ -33,6 +33,8 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
       case 'In attesa di risposta':
         return colors.warning;
       case 'Confermato':
+        return colors.info;
+      case 'intero':
         return colors.success;
       case 'Rifiutato':
         return colors.error;
@@ -41,21 +43,34 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
     }
   };
 
+  const getStatusLabel = (status: F24['stato']) => {
+    switch (status) {
+      case 'intero':
+        return 'Pagato Intero';
+      case 'Confermato':
+        return 'Pagato Parziale';
+      default:
+        return status;
+    }
+  };
+
   const handleAccept = () => {
     Alert.alert(
       'Conferma Pagamento',
-      `Confermi di voler accettare il pagamento di €${f24.importo.toFixed(2)}?`,
+      `Confermi di voler accettare il pagamento completo di €${f24.importo.toFixed(2)}?`,
       [
         { text: 'Annulla', style: 'cancel' },
         {
           text: 'Conferma',
           onPress: () => {
-            console.log('Accepting F24:', f24.idF24);
+            console.log('Accepting F24 (full payment):', f24.idF24);
             setLoading(true);
             setTimeout(() => {
+              // When accepting without specifying an amount, it's a full payment
+              // The backend will set stato to "intero"
               onUpdate(f24.idF24, { stato: 'Confermato' });
               setLoading(false);
-              Alert.alert('Successo', 'Pagamento confermato');
+              Alert.alert('Successo', 'Pagamento completo confermato');
             }, 500);
           },
         },
@@ -89,13 +104,14 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
   const handlePartialPayment = () => {
     const amount = parseFloat(partialAmount);
     if (isNaN(amount) || amount <= 0 || amount >= f24.importo) {
-      Alert.alert('Errore', 'Inserisci un importo valido');
+      Alert.alert('Errore', 'Inserisci un importo valido (maggiore di 0 e minore dell\'importo totale)');
       return;
     }
 
     console.log('Partial payment for F24:', f24.idF24, 'Amount:', amount);
     setLoading(true);
     setTimeout(() => {
+      // When specifying a partial amount, the backend will keep stato as "Confermato"
       onUpdate(f24.idF24, {
         stato: 'Confermato',
         importoPagato: amount,
@@ -126,7 +142,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
     router.push('/contact-support');
   };
 
-  const showChangeOfMindButton = f24.stato === 'Confermato' || f24.stato === 'Rifiutato';
+  const showChangeOfMindButton = f24.stato === 'Confermato' || f24.stato === 'Rifiutato' || f24.stato === 'intero';
   const showDecisionButtons = canMakeDecisions() && f24.stato === 'In attesa di risposta';
 
   return (
@@ -143,7 +159,7 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
             )}
           </View>
           <View style={[styles.badge, { backgroundColor: getStatusColor(f24.stato) }]}>
-            <Text style={styles.badgeText}>{f24.stato}</Text>
+            <Text style={styles.badgeText}>{getStatusLabel(f24.stato)}</Text>
           </View>
         </View>
 
