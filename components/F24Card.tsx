@@ -54,6 +54,35 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
     }
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return null;
+    }
+  };
+
+  const isOverdue = (dateString?: string) => {
+    if (!dateString) return false;
+    
+    try {
+      const dueDate = new Date(dateString);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate < today;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const handleAccept = () => {
     Alert.alert(
       'Conferma Pagamento',
@@ -144,6 +173,8 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
 
   const showChangeOfMindButton = f24.stato === 'Confermato' || f24.stato === 'Rifiutato' || f24.stato === 'intero';
   const showDecisionButtons = canMakeDecisions() && f24.stato === 'In attesa di risposta';
+  const formattedDate = formatDate(f24.scadenza);
+  const overdueStatus = isOverdue(f24.scadenza);
 
   return (
     <>
@@ -152,6 +183,22 @@ export default function F24Card({ f24, onUpdate }: F24CardProps) {
           <View style={styles.headerLeft}>
             <Text style={styles.description}>{f24.descrizione}</Text>
             <Text style={styles.amount}>€{f24.importo.toFixed(2)}</Text>
+            {formattedDate && (
+              <View style={styles.dueDateContainer}>
+                <IconSymbol 
+                  name="calendar" 
+                  size={16} 
+                  color={overdueStatus ? colors.error : colors.textSecondary} 
+                />
+                <Text style={[
+                  styles.dueDate,
+                  overdueStatus && styles.dueDateOverdue
+                ]}>
+                  Scadenza: {formattedDate}
+                  {overdueStatus && ' (Scaduto)'}
+                </Text>
+              </View>
+            )}
             {f24.stato === 'Confermato' && f24.importoPagato && f24.importoPagato < f24.importo && (
               <Text style={styles.partialAmount}>
                 Pagato: €{f24.importoPagato.toFixed(2)}
@@ -309,9 +356,26 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: 4,
   },
+  dueDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  dueDate: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  dueDateOverdue: {
+    color: colors.error,
+    fontWeight: '600',
+  },
   partialAmount: {
     fontSize: 14,
     color: colors.textSecondary,
+    marginTop: 4,
   },
   badge: {
     paddingHorizontal: 12,

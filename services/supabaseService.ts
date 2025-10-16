@@ -425,7 +425,7 @@ export class SupabaseService {
       const { data, error } = await supabase
         .from('scadenze_f24')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('scadenza', { ascending: true, nullsFirst: false });
 
       if (error) {
         console.error('Error fetching F24s:', error);
@@ -440,6 +440,7 @@ export class SupabaseService {
         linkPdf: row.link_pdf || '',
         stato: row.stato as F24['stato'],
         importoPagato: row.importo_pagato ? parseFloat(row.importo_pagato) : undefined,
+        scadenza: row.scadenza || undefined,
       }));
     } catch (error) {
       console.error('Error in getF24s:', error);
@@ -453,7 +454,7 @@ export class SupabaseService {
         .from('scadenze_f24')
         .select('*')
         .eq('partita_iva_azienda', piva)
-        .order('created_at', { ascending: false });
+        .order('scadenza', { ascending: true, nullsFirst: false });
 
       if (error) {
         console.error('Error fetching F24s by piva:', error);
@@ -468,6 +469,7 @@ export class SupabaseService {
         linkPdf: row.link_pdf || '',
         stato: row.stato as F24['stato'],
         importoPagato: row.importo_pagato ? parseFloat(row.importo_pagato) : undefined,
+        scadenza: row.scadenza || undefined,
       }));
     } catch (error) {
       console.error('Error in getF24sByPiva:', error);

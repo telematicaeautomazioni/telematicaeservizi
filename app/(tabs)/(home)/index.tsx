@@ -502,7 +502,7 @@ export default function HomeScreen() {
               {refreshing ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <IconSymbol name="refresh" size={24} color={colors.primary} />
+                <IconSymbol name="settings" size={24} color={colors.primary} />
               )}
             </TouchableOpacity>
             <TouchableOpacity

@@ -22,6 +22,7 @@ export interface F24 {
   linkPdf: string;
   stato: 'In attesa di risposta' | 'Confermato' | 'Rifiutato' | 'intero';
   importoPagato?: number;
+  scadenza?: string; // Due date in ISO format (YYYY-MM-DD)
 }
 
 export interface Document {
