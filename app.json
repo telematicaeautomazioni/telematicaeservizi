@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Telematica E Servizi",
@@ -42,7 +41,10 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "bdeb17eb-a711-4983-8e33-1272dc0a458f"
+      }
     }
   }
 }
